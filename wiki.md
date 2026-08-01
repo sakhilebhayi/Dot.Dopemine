@@ -1,6 +1,6 @@
 ---
 title: Dot.Dopemine — Platform Wiki
-version: 0.2.0
+version: 0.2.1
 status: mvp-implemented-unverified
 owners: [Dopemine Platform Lead]
 platform-id: dot-dopemine
@@ -163,6 +163,7 @@ We subscribe to Dot.Brain's mechanic-retirement candidates (engagement up, outco
 |---|---|---|---|
 | 0.1.0 | 2026-08-01 | Dopemine Platform Lead | Initial wiki: architecture blueprint derived from Dot.Brain's platforms/dot-dopemine.md, adapted to platform-owned framing |
 | 0.2.0 | 2026-08-01 | AI agent (hand-authored, unverified — see §1) | MVP domain layer implemented: Jetstream Teams shell copied from Dot.Billing's reviewed boilerplate (branding adapted); `Mechanic`/`MechanicDeployment`/`ProhibitedMetricPattern` models with a two-layer structural ethics gate (fixed `MechanicCategory` enum + acid-test-gated certification enforced at both action and model layers); Livewire catalog browsing and team deployment CRUD; seeder with 8 certified example mechanics and the 5-entry prohibited-metric list from §6; `EthicsGateTest` asserting the gate holds even when bypassing the intended action classes. No PHP/Composer/PostgreSQL was available while authoring this — see README.md "Status". |
+| 0.2.1 | 2026-08-01 | AI agent (incremental pass, unexecuted — see §1) | Targeted re-verification pass per Dot.Brain's Engineering Loop (02-Engineering-Loop.md §5.6). (1) Checked every `MechanicDeployment` lookup by ID for team-scoping, given a cross-tenant-access bug class found repeatedly elsewhere in the ecosystem this session: `App\Livewire\MechanicDeployments::retire()` already scopes its `findOrFail` by `team_id` before lookup, and `routes/web.php`'s dashboard query is likewise team-scoped — clean, no fix needed. Added `tests/Feature/Dopemine/MechanicDeploymentTenancyTest.php` to encode that guarantee as a permanent regression test (cross-team retire attempt throws `ModelNotFoundException`, own-team retire succeeds, deployment list is team-filtered), matching the `ModelNotFoundException`-expectation convention used elsewhere in the ecosystem (e.g. Dot.Agents' `WorkflowList` tests). (2) Re-verified the ethics gate end-to-end: `App\Enums\MechanicCategory` remains a closed backed enum with no free-text escape hatch; `App\Models\Mechanic::booted()`'s `saving` listener still refuses to persist `status = certified` without `acid_test_passed = true`; `App\Actions\Dopemine\CertifyMechanic` still checks `acid_test_passed` before certifying and gives a clean `ValidationException`; `MechanicDeployment::booted()` still refuses to create a deployment against an uncertified mechanic. All three layers intact, unweakened, and covered by the existing `EthicsGateTest`. No changes were needed to the gate itself. |
 
 ## Open Questions
 
