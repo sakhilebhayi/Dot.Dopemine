@@ -1,6 +1,6 @@
 ---
 title: Dot.Dopemine — Platform Wiki
-version: 0.3.0
+version: 0.3.1
 status: mvp-implemented-unverified
 owners: [Dopemine Platform Lead]
 platform-id: dot-dopemine
@@ -161,6 +161,7 @@ We subscribe to Dot.Brain's mechanic-retirement candidates (engagement up, outco
 
 | Version | Date | Author | Change |
 |---|---|---|---|
+| 0.3.1 | 2026-08-03 | Sakhile Bhayi | Fixed a lingering branding gap: `application-logo.blade.php` (and, where present, `application-mark.blade.php`) still rendered Jetstream's stock placeholder SVG wordmark in the app sidebar/nav and other authenticated-app surfaces, even though the login page's own `authentication-card-logo.blade.php` and the marketing welcome page already used the real logo. These two components render on every authenticated page via Jetstream's own layout, so the placeholder was visible constantly, not just on one screen. Swapped to the real logo file, matching the asset path already used elsewhere in this repo. |
 | 0.3.0 | 2026-08-02 | Sakhile Bhayi | Marketing welcome page visual pass on `resources/views/welcome.blade.php`: `welcome.blade.php` was the untouched Laravel/Jetstream scaffold — no custom nav or footer branding existed to swap, only a large placeholder Laravel wordmark SVG filling the right-hand decorative panel. Replaced that placeholder SVG with the real product logo (`public/images/logo.png`, verified to exist on disk) and gave the panel a real photographic background: runners celebrating at a finish line, by RETRATO DEPORTIVO (@retratodeportivo), unsplash.com/photos/runners-celebrating-at-a-finish-line-event-qedI1eHsDFw — chosen for Dot.Dopemine's real domain per §1 (engagement/motivation/achievement mechanics), with a light/dark-aware gradient overlay layered on top for text and logo contrast. Verified the image CDN URL resolves via `curl -sI` (HTTP/2 200) before using it. Removed the now-orphaned ~60-line decorative Laravel "13" SVG mark entirely rather than leaving it dead and hidden. No copy, layout, or routes were changed. |
 | 0.1.0 | 2026-08-01 | Dopemine Platform Lead | Initial wiki: architecture blueprint derived from Dot.Brain's platforms/dot-dopemine.md, adapted to platform-owned framing |
 | 0.2.0 | 2026-08-01 | AI agent (hand-authored, unverified — see §1) | MVP domain layer implemented: Jetstream Teams shell copied from Dot.Billing's reviewed boilerplate (branding adapted); `Mechanic`/`MechanicDeployment`/`ProhibitedMetricPattern` models with a two-layer structural ethics gate (fixed `MechanicCategory` enum + acid-test-gated certification enforced at both action and model layers); Livewire catalog browsing and team deployment CRUD; seeder with 8 certified example mechanics and the 5-entry prohibited-metric list from §6; `EthicsGateTest` asserting the gate holds even when bypassing the intended action classes. No PHP/Composer/PostgreSQL was available while authoring this — see README.md "Status". |
