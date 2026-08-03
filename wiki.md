@@ -1,6 +1,6 @@
 ---
 title: Dot.Dopemine — Platform Wiki
-version: 0.2.2
+version: 0.3.0
 status: mvp-implemented-unverified
 owners: [Dopemine Platform Lead]
 platform-id: dot-dopemine
@@ -161,6 +161,7 @@ We subscribe to Dot.Brain's mechanic-retirement candidates (engagement up, outco
 
 | Version | Date | Author | Change |
 |---|---|---|---|
+| 0.3.0 | 2026-08-02 | Sakhile Bhayi | Marketing welcome page visual pass on `resources/views/welcome.blade.php`: `welcome.blade.php` was the untouched Laravel/Jetstream scaffold — no custom nav or footer branding existed to swap, only a large placeholder Laravel wordmark SVG filling the right-hand decorative panel. Replaced that placeholder SVG with the real product logo (`public/images/logo.png`, verified to exist on disk) and gave the panel a real photographic background: runners celebrating at a finish line, by RETRATO DEPORTIVO (@retratodeportivo), unsplash.com/photos/runners-celebrating-at-a-finish-line-event-qedI1eHsDFw — chosen for Dot.Dopemine's real domain per §1 (engagement/motivation/achievement mechanics), with a light/dark-aware gradient overlay layered on top for text and logo contrast. Verified the image CDN URL resolves via `curl -sI` (HTTP/2 200) before using it. Removed the now-orphaned ~60-line decorative Laravel "13" SVG mark entirely rather than leaving it dead and hidden. No copy, layout, or routes were changed. |
 | 0.1.0 | 2026-08-01 | Dopemine Platform Lead | Initial wiki: architecture blueprint derived from Dot.Brain's platforms/dot-dopemine.md, adapted to platform-owned framing |
 | 0.2.0 | 2026-08-01 | AI agent (hand-authored, unverified — see §1) | MVP domain layer implemented: Jetstream Teams shell copied from Dot.Billing's reviewed boilerplate (branding adapted); `Mechanic`/`MechanicDeployment`/`ProhibitedMetricPattern` models with a two-layer structural ethics gate (fixed `MechanicCategory` enum + acid-test-gated certification enforced at both action and model layers); Livewire catalog browsing and team deployment CRUD; seeder with 8 certified example mechanics and the 5-entry prohibited-metric list from §6; `EthicsGateTest` asserting the gate holds even when bypassing the intended action classes. No PHP/Composer/PostgreSQL was available while authoring this — see README.md "Status". |
 | 0.2.2 | 2026-08-02 | Sakhile Bhayi | **Executed for real, for the first time.** `composer install` generated this repo's first-ever `composer.lock` (never committed before — flagged as an open question in 0.2.0, now resolved) and is now committed for reproducible installs. `migrate` (12 migrations, clean) and the full test suite ran clean: 62 tests, 55 passed, 7 skipped by config, 0 failed — including all 9 `EthicsGateTest` cases and all 4 `MechanicDeploymentTenancyTest` cases from 0.2.1, previously verified by review only, now genuinely executed and passing. Also guarded the six shared Jetstream-core migrations per Dot.Brain adr/ADR-0013. |
