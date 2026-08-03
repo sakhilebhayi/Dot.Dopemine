@@ -17,13 +17,13 @@ Route::middleware([
     'verified',
 ])->group(function () {
     Route::get('/dashboard', function () {
-        $team = auth()->user()->currentTeam;
-
         return view('dashboard', [
             'certifiedCount' => Mechanic::where('status', 'certified')->count(),
             'proposedCount' => Mechanic::where('status', 'proposed')->count(),
             'decertifiedCount' => Mechanic::where('status', 'decertified')->count(),
-            'activeDeployments' => MechanicDeployment::where('team_id', $team->id)->where('status', 'active')->count(),
+            // MechanicDeployment::HasTeamScope already restricts this query
+            // to the current team; no explicit where('team_id', ...) needed.
+            'activeDeployments' => MechanicDeployment::where('status', 'active')->count(),
             'prohibitedPatterns' => ProhibitedMetricPattern::orderBy('pattern')->get(),
         ]);
     })->name('dashboard');

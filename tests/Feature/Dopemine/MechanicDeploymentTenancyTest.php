@@ -121,4 +121,37 @@ class MechanicDeploymentTenancyTest extends TestCase
             ->assertSee('Own Team Mechanic')
             ->assertDontSee('Other Team Mechanic');
     }
+
+    /**
+     * MechanicDeployments::retire() and ::deployments() no longer contain an
+     * explicit where('team_id', ...) call — that guard now lives solely in
+     * MechanicDeployment's HasTeamScope global scope (app/Models/Concerns/
+     * HasTeamScope.php). This test bypasses the Livewire component entirely
+     * and queries the model directly, proving the scope itself — not a
+     * controller/component-level check — is what makes another team's row
+     * invisible. Mirrors Dot.Finance's
+     * test_scope_alone_blocks_cross_user_access_even_without_a_policy_check.
+     */
+    public function test_scope_alone_blocks_cross_team_access_even_without_a_policy_check(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+        $attacker = User::factory()->withPersonalTeam()->create();
+        $mechanic = Mechanic::factory()->certified()->create();
+
+        $deployment = MechanicDeployment::factory()->create([
+            'team_id' => $owner->currentTeam->id,
+            'mechanic_id' => $mechanic->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($attacker);
+
+        $this->assertNull(MechanicDeployment::find($deployment->id));
+        $this->assertSame(0, MechanicDeployment::query()->count());
+
+        $this->actingAs($owner);
+
+        $this->assertNotNull(MechanicDeployment::find($deployment->id));
+        $this->assertSame(1, MechanicDeployment::query()->count());
+    }
 }

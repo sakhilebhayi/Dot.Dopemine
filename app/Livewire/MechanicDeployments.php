@@ -12,6 +12,11 @@ use Livewire\Component;
  * Which certified mechanics the current team has deployed, and their
  * status. Deploying happens from MechanicCatalog; this component covers
  * viewing and retiring (wiki.md §5 `engagement.deployment.retired`).
+ *
+ * MechanicDeployment::HasTeamScope already restricts every query below to
+ * the current team, so no explicit where('team_id', ...) is needed here —
+ * a cross-team ID passed to retire() is invisible to the model and
+ * findOrFail() throws ModelNotFoundException, same as before.
  */
 class MechanicDeployments extends Component
 {
@@ -19,7 +24,6 @@ class MechanicDeployments extends Component
     public function deployments(): Collection
     {
         return MechanicDeployment::query()
-            ->where('team_id', auth()->user()->currentTeam->id)
             ->with('mechanic')
             ->latest('started_at')
             ->get();
@@ -27,8 +31,7 @@ class MechanicDeployments extends Component
 
     public function retire(int $deploymentId): void
     {
-        $deployment = MechanicDeployment::where('team_id', auth()->user()->currentTeam->id)
-            ->findOrFail($deploymentId);
+        $deployment = MechanicDeployment::findOrFail($deploymentId);
 
         app(RetireMechanicDeployment::class)->retire($deployment);
 

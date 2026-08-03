@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DeploymentStatus;
+use App\Models\Concerns\HasTeamScope;
 use Database\Factories\MechanicDeploymentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,9 @@ use RuntimeException;
 
 /**
  * Records that a specific team is using a specific certified Mechanic
- * (wiki.md §4 "Deployment"). Team-scoped via `team_id`.
+ * (wiki.md §4 "Deployment"). Team-scoped via `team_id`; HasTeamScope
+ * applies a global query scope so every read is automatically limited to
+ * the authenticated user's current team (see app/Models/Concerns/HasTeamScope.php).
  *
  * Ethics gate continuation: a deployment can only be created against a
  * Mechanic whose status is Certified — see the `creating` listener below.
@@ -21,7 +24,7 @@ use RuntimeException;
 class MechanicDeployment extends Model
 {
     /** @use HasFactory<MechanicDeploymentFactory> */
-    use HasFactory;
+    use HasFactory, HasTeamScope;
 
     protected $fillable = [
         'team_id',
