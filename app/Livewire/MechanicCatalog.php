@@ -8,7 +8,9 @@ use App\Actions\Dopemine\DeployMechanic;
 use App\Enums\MechanicCategory;
 use App\Enums\MechanicStatus;
 use App\Models\Mechanic;
+use App\Models\Team;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -51,17 +53,38 @@ class MechanicCatalog extends Component
             ->get();
     }
 
+    /**
+     * A user's current_team_id can be null even for an existing account —
+     * Jetstream's Team::removeUser() (invoked from RemoveTeamMember) nulls
+     * it out when a user is removed from whichever team happens to be
+     * their current one, and nothing re-points it at their personal team
+     * afterward. So `Auth::user()->currentTeam` is genuinely nullable
+     * here, not just defensively so.
+     */
+    private function resolveCurrentTeam(): ?Team
+    {
+        return Auth::user()?->currentTeam;
+    }
+
     public function canGovern(): bool
     {
         $user = auth()->user();
+        $team = $this->resolveCurrentTeam();
 
-        return $user && $user->currentTeam && $user->hasTeamRole($user->currentTeam, 'admin');
+        return $user && $team && $user->hasTeamRole($team, 'admin');
     }
 
     public function deployToCurrentTeam(int $mechanicId): void
     {
+        $team = $this->resolveCurrentTeam();
+
+        // No unscoped fallback here: this action is only reachable from an
+        // already-rendered page, so there is no safe redirect target — a
+        // user with no active team (e.g. removed from their current team,
+        // see resolveCurrentTeam()) simply cannot deploy a mechanic to one.
+        abort_if(! $team, 403, 'No active team selected.');
+
         $mechanic = Mechanic::findOrFail($mechanicId);
-        $team = auth()->user()->currentTeam;
 
         app(DeployMechanic::class)->deploy($team, $mechanic);
 
