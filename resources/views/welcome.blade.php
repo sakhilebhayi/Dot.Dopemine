@@ -136,16 +136,20 @@
 
         <!-- Hero -->
         <section class="relative pt-32 pb-16 sm:pb-24 px-5 sm:px-8 overflow-hidden">
-            <div class="max-w-[1400px] mx-auto">
+            <!-- Photo: runners celebrating at a finish-line event, by RETRATO DEPORTIVO (@retratodeportivo), unsplash.com/photos/runners-celebrating-at-a-finish-line-event-qedI1eHsDFw -->
+            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1774050250283-2444f7d634d5?q=80&w=2400&auto=format&fit=crop');"></div>
+            <div class="absolute inset-0" style="background: linear-gradient(100deg, rgba(21,23,27,0.92) 0%, rgba(21,23,27,0.80) 32%, rgba(21,23,27,0.45) 55%, rgba(21,23,27,0.18) 75%, rgba(21,23,27,0.02) 92%);"></div>
+            <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(21,23,27,0) 0%, rgba(21,23,27,0.10) 55%, rgba(21,23,27,0.35) 80%, #f4f3ef 100%);"></div>
+            <div class="relative z-10 max-w-[1400px] mx-auto">
                 <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-14 lg:gap-10 items-center">
                     <div class="reveal" data-reveal>
                         <p class="font-mono text-xs tracking-[0.18em] uppercase text-[var(--gold)] mb-6">
                             Engagement &amp; motivation platform
                         </p>
-                        <h1 class="font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.08] tracking-tight text-[var(--ink)] mb-6">
+                        <h1 class="font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.08] tracking-tight text-[var(--paper)] mb-6">
                             Every mechanic answers<br>one question first.
                         </h1>
-                        <p class="text-lg text-[var(--ink-soft)] leading-relaxed max-w-xl mb-10">
+                        <p class="text-lg text-[var(--paper)] leading-relaxed max-w-xl mb-10">
                             Dot.Dopemine is the ecosystem's catalog of certified engagement mechanics — progress surfaces, recognition, habit scaffolding — each recorded against an acid test before any platform can deploy it. Would we show this to the person it targets, with its intent labeled? A mechanic that fails doesn't get certified. Full stop.
                         </p>
 
@@ -154,7 +158,7 @@
                                 <a href="{{ route('register') }}" class="press px-7 py-3.5 bg-[var(--ink)] hover:bg-[var(--rust)] text-white font-display-upright font-semibold rounded-full transition-colors">
                                     Create account
                                 </a>
-                                <a href="#prohibited" class="press flex items-center gap-2 px-7 py-3.5 text-[var(--ink)] font-medium rounded-full border border-[var(--line)] hover:border-[var(--rust-soft)] transition-colors">
+                                <a href="#prohibited" class="press flex items-center gap-2 px-7 py-3.5 text-[var(--paper)] font-medium rounded-full border border-[rgba(244,243,239,0.35)] hover:border-[var(--rust-soft)] transition-colors">
                                     See what we won't build
                                 </a>
                             </div>
