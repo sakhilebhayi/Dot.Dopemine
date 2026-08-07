@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Schema;
  * event/listener wiring emits notifications automatically yet — see
  * wiki.md Roadmap.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {

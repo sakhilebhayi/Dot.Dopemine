@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Schema;
  * table records, by name, which patterns were considered and rejected, and
  * why — visible on the catalog dashboard so the restraint is legible.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('prohibited_metric_patterns', function (Blueprint $table) {

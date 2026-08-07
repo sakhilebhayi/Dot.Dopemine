@@ -63,9 +63,7 @@ class NotificationBellTest extends TestCase
 
 class DopemineTestNotification extends Notification
 {
-    public function __construct(private readonly string $title)
-    {
-    }
+    public function __construct(private readonly string $title) {}
 
     public function via(object $notifiable): array
     {

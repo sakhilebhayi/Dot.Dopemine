@@ -4,10 +4,11 @@ namespace Database\Factories;
 
 use App\Enums\MechanicCategory;
 use App\Enums\MechanicStatus;
+use App\Models\Mechanic;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\Mechanic>
+ * @extends Factory<Mechanic>
  */
 class MechanicFactory extends Factory
 {

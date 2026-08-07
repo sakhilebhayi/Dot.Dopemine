@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Schema;
  * cross-platform Knowledge Pack ingestion pipeline are out of scope for this
  * pass — see wiki.md Roadmap and Open Questions.
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('mechanic_deployments', function (Blueprint $table) {

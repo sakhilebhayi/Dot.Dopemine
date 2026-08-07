@@ -23,7 +23,8 @@ use Illuminate\Support\Facades\Schema;
  * mechanic whose acid-test verdict has not passed (also enforced again at
  * the model layer in App\Models\Mechanic — see its `saving` listener).
  */
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('mechanics', function (Blueprint $table) {

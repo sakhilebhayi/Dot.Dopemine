@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Mechanic;
+use App\Models\MechanicDeployment;
 use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\MechanicDeployment>
+ * @extends Factory<MechanicDeployment>
  */
 class MechanicDeploymentFactory extends Factory
 {
