@@ -58,6 +58,9 @@
                                 Decertify
                             </button>
                         @endif
+                        <button wire:click="startRecordingWellbeing({{ $mechanic->id }})" class="dot-btn dot-btn-ghost" style="font-size:11.5px;padding:6px 11px;">
+                            Record wellbeing observation
+                        </button>
                     @endif
                 </div>
 
@@ -68,6 +71,28 @@
                         <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
                             <button wire:click="confirmDecertify" class="dot-btn" style="font-size:11px;padding:5px 10px;background:#ef4444;color:#fff;">Confirm decertify</button>
                             <button wire:click="$set('decertifyingId', null)" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Cancel</button>
+                        </div>
+                    </div>
+                @endif
+
+                @if ($recordingWellbeingId === $mechanic->id)
+                    <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);">
+                        <input type="text" wire:model="wellbeingCohort" placeholder="Cohort (e.g. Dot.Projects — pilot team)" class="dot-input" style="margin-bottom:0.4rem;">
+                        @error('wellbeingCohort') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
+                            <input type="date" wire:model="wellbeingWindowStart" class="dot-input">
+                            <input type="date" wire:model="wellbeingWindowEnd" class="dot-input">
+                            <input type="number" wire:model="wellbeingCohortSize" placeholder="Cohort size (n >= 50)" class="dot-input" style="width:150px;">
+                            <input type="text" wire:model="wellbeingMovement" placeholder="Wellbeing movement" class="dot-input" style="width:150px;">
+                        </div>
+                        @error('wellbeingWindowStart') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
+                        @error('wellbeingWindowEnd') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
+                        @error('wellbeingCohortSize') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
+                        @error('wellbeingMovement') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
+                        <textarea wire:model="wellbeingNotes" class="dot-input" rows="2" placeholder="Notes (optional)"></textarea>
+                        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                            <button wire:click="saveWellbeingObservation" class="dot-btn dot-btn-primary" style="font-size:11px;padding:5px 10px;">Save observation</button>
+                            <button wire:click="cancelRecordingWellbeing" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Cancel</button>
                         </div>
                     </div>
                 @endif

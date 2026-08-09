@@ -9,6 +9,7 @@ use App\Enums\MechanicCategory;
 use App\Enums\MechanicStatus;
 use App\Models\Mechanic;
 use App\Models\Team;
+use App\Models\WellbeingObservation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -29,6 +30,20 @@ class MechanicCatalog extends Component
     public string $decertifyingReason = '';
 
     public ?int $decertifyingId = null;
+
+    public string $wellbeingCohort = '';
+
+    public string $wellbeingWindowStart = '';
+
+    public string $wellbeingWindowEnd = '';
+
+    public string $wellbeingCohortSize = '';
+
+    public string $wellbeingMovement = '';
+
+    public string $wellbeingNotes = '';
+
+    public ?int $recordingWellbeingId = null;
 
     #[Computed]
     public function categories(): array
@@ -130,6 +145,55 @@ class MechanicCatalog extends Component
         $this->decertifyingReason = '';
 
         unset($this->mechanics);
+    }
+
+    public function startRecordingWellbeing(int $mechanicId): void
+    {
+        abort_unless($this->canGovern(), 403);
+
+        Mechanic::findOrFail($mechanicId);
+
+        $this->recordingWellbeingId = $mechanicId;
+        $this->wellbeingCohort = '';
+        $this->wellbeingWindowStart = '';
+        $this->wellbeingWindowEnd = '';
+        $this->wellbeingCohortSize = '';
+        $this->wellbeingMovement = '';
+        $this->wellbeingNotes = '';
+    }
+
+    public function cancelRecordingWellbeing(): void
+    {
+        $this->recordingWellbeingId = null;
+    }
+
+    public function saveWellbeingObservation(): void
+    {
+        abort_unless($this->canGovern(), 403);
+
+        $mechanic = Mechanic::findOrFail($this->recordingWellbeingId);
+
+        $this->validate([
+            'wellbeingCohort' => ['required', 'string', 'max:255'],
+            'wellbeingWindowStart' => ['required', 'date'],
+            'wellbeingWindowEnd' => ['required', 'date', 'after_or_equal:wellbeingWindowStart'],
+            'wellbeingCohortSize' => ['required', 'integer', 'min:50'],
+            'wellbeingMovement' => ['required', 'numeric'],
+            'wellbeingNotes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        WellbeingObservation::create([
+            'mechanic_id' => $mechanic->id,
+            'cohort' => $this->wellbeingCohort,
+            'window_start' => $this->wellbeingWindowStart,
+            'window_end' => $this->wellbeingWindowEnd,
+            'cohort_size' => $this->wellbeingCohortSize,
+            'wellbeing_movement' => $this->wellbeingMovement,
+            'recorded_by' => auth()->id(),
+            'notes' => $this->wellbeingNotes ?: null,
+        ]);
+
+        $this->recordingWellbeingId = null;
     }
 
     public function render()
