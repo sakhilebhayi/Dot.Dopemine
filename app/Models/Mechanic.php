@@ -83,6 +83,11 @@ class Mechanic extends Model
         return $this->deployments()->where('status', 'active');
     }
 
+    public function wellbeingObservations(): HasMany
+    {
+        return $this->hasMany(WellbeingObservation::class);
+    }
+
     public function isCertified(): bool
     {
         return $this->status === MechanicStatus::Certified;
