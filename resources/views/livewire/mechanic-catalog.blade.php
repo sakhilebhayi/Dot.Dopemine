@@ -1,4 +1,46 @@
 <div>
+    @if ($this->canGovern() && $this->retirementCandidates->isNotEmpty())
+        <div class="dot-card" style="padding:1.25rem 1.5rem;margin-bottom:1rem;border-color:rgba(239,68,68,0.3);">
+            <h3 style="font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;color:#f4f4f5;margin:0 0 0.75rem;">Retirement Candidates</h3>
+            @foreach ($this->retirementCandidates as $candidate)
+                <div style="padding:0.75rem 0;border-top:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+                        <div>
+                            <span style="color:#f4f4f5;font-weight:600;font-size:0.85rem;">{{ $candidate->mechanic->name }}</span>
+                            <span style="color:#71717a;font-size:0.75rem;margin-left:0.5rem;">
+                                coupling rate {{ number_format($candidate->coupling_rate * 100, 1) }}% across {{ $candidate->sample_size }} record(s)
+                            </span>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;">
+                            <button wire:click="confirmRetirementCandidate({{ $candidate->id }})" wire:confirm="Confirm retirement? This will decertify the mechanic." class="dot-btn" style="font-size:11px;padding:5px 10px;background:#ef4444;color:#fff;">
+                                Confirm retirement
+                            </button>
+                            <button wire:click="startDismissingCandidate({{ $candidate->id }})" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                    @php($latestWellbeing = $candidate->mechanic->wellbeingObservations()->latest('window_end')->first())
+                    @if ($latestWellbeing)
+                        <p style="font-size:0.72rem;color:#52525b;margin:0.4rem 0 0;">
+                            Most recent wellbeing observation: {{ $latestWellbeing->cohort }}, movement {{ $latestWellbeing->wellbeing_movement }} (n={{ $latestWellbeing->cohort_size }})
+                        </p>
+                    @endif
+                    @if ($dismissingCandidateId === $candidate->id)
+                        <div style="margin-top:0.6rem;">
+                            <textarea wire:model="dismissalNotes" class="dot-input" rows="2" placeholder="Dismissal notes (required)"></textarea>
+                            @error('dismissalNotes') <div style="color:#ef4444;font-size:11px;margin-top:4px;">{{ $message }}</div> @enderror
+                            <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                                <button wire:click="confirmDismissCandidate" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Confirm dismiss</button>
+                                <button wire:click="$set('dismissingCandidateId', null)" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Cancel</button>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endif
+
     <div class="dot-card" style="padding:1.25rem 1.5rem;margin-bottom:1rem;">
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
             <select wire:model.live="statusFilter" class="dot-input" style="width:auto;">

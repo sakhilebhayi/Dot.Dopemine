@@ -8,6 +8,7 @@ use App\Actions\Dopemine\DeployMechanic;
 use App\Enums\MechanicCategory;
 use App\Enums\MechanicStatus;
 use App\Models\Mechanic;
+use App\Models\MechanicRetirementCandidate;
 use App\Models\Team;
 use App\Models\WellbeingObservation;
 use Illuminate\Support\Collection;
@@ -45,6 +46,10 @@ class MechanicCatalog extends Component
 
     public ?int $recordingWellbeingId = null;
 
+    public ?int $dismissingCandidateId = null;
+
+    public string $dismissalNotes = '';
+
     #[Computed]
     public function categories(): array
     {
@@ -65,6 +70,16 @@ class MechanicCatalog extends Component
             ->when($this->statusFilter, fn ($query) => $query->where('status', $this->statusFilter))
             ->withCount(['activeDeployments'])
             ->orderBy('name')
+            ->get();
+    }
+
+    #[Computed]
+    public function retirementCandidates(): Collection
+    {
+        return MechanicRetirementCandidate::query()
+            ->where('status', 'open')
+            ->with('mechanic')
+            ->latest('detected_at')
             ->get();
     }
 
@@ -194,6 +209,63 @@ class MechanicCatalog extends Component
         ]);
 
         $this->recordingWellbeingId = null;
+    }
+
+    public function confirmRetirementCandidate(int $candidateId): void
+    {
+        abort_unless($this->canGovern(), 403);
+
+        $candidate = MechanicRetirementCandidate::findOrFail($candidateId);
+        $mechanic = $candidate->mechanic;
+
+        $reason = sprintf(
+            'Decoupling finding: coupling rate %s across %d outcome records over the last 3 months (wiki.md §11).',
+            $candidate->coupling_rate,
+            $candidate->sample_size
+        );
+
+        app(DecertifyMechanic::class)->decertify(auth()->user(), $mechanic, ['reason' => $reason]);
+
+        $candidate->update([
+            'status' => 'confirmed',
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+        ]);
+
+        unset($this->mechanics, $this->retirementCandidates);
+    }
+
+    public function startDismissingCandidate(int $candidateId): void
+    {
+        abort_unless($this->canGovern(), 403);
+
+        MechanicRetirementCandidate::findOrFail($candidateId);
+
+        $this->dismissingCandidateId = $candidateId;
+        $this->dismissalNotes = '';
+    }
+
+    public function confirmDismissCandidate(): void
+    {
+        abort_unless($this->canGovern(), 403);
+
+        $this->validate([
+            'dismissalNotes' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $candidate = MechanicRetirementCandidate::findOrFail($this->dismissingCandidateId);
+
+        $candidate->update([
+            'status' => 'dismissed',
+            'review_notes' => $this->dismissalNotes,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+        ]);
+
+        $this->dismissingCandidateId = null;
+        $this->dismissalNotes = '';
+
+        unset($this->retirementCandidates);
     }
 
     public function render()
