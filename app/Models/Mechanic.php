@@ -54,6 +54,8 @@ class Mechanic extends Model
             'acid_test_passed' => 'boolean',
             'certified_at' => 'datetime',
             'decertified_at' => 'datetime',
+            'coupling_rate' => 'decimal:4',
+            'coupling_rate_computed_at' => 'datetime',
         ];
     }
 

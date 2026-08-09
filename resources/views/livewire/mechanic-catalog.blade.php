@@ -38,6 +38,11 @@
                     </span>
                     <span style="font-size:11px;color:#52525b;">acid test: {{ $mechanic->acid_test_passed ? 'passed' : 'not recorded' }}</span>
                     <span style="font-size:11px;color:#52525b;">{{ $mechanic->active_deployments_count }} team(s) using this</span>
+                    @if ($mechanic->coupling_rate_computed_at)
+                        <span style="font-size:11px;color:{{ $mechanic->coupling_rate >= 0.5 ? '#22c55e' : '#ef4444' }};">
+                            coupling: {{ number_format($mechanic->coupling_rate * 100, 0) }}%
+                        </span>
+                    @endif
                 </div>
 
                 <div style="display:flex;gap:0.5rem;margin-top:0.9rem;flex-wrap:wrap;">
