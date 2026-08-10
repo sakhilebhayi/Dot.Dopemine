@@ -89,7 +89,7 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon">
-                <img src="{{ asset('images/logo.png') }}" alt="Dot.Dopemine" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">
+                <img src="{{ asset('images/mark.png') }}" alt="Dot.Dopemine" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">
             </div>
             <div>
                 <div class="brand-name">Dot.Dopemine</div>
