@@ -1,0 +1,112 @@
+name: Bootstrap Production
+
+# One-time first deployment of Dot.Dopemine to the dopemine.infodot.co.za
+# subdomain, mirroring the established mines layout: the cPanel docroot is
+# ~/dopemine.infodot.co.za, the repo lives at <docroot>/dopemine, and the
+# docroot gets an index.php shim + .htaccess + asset symlinks into
+# dopemine/public. SQLite on purpose: the mechanic catalog and deployment
+# ledger are small, and it means no database credentials exist anywhere.
+# Safe to re-run: every step is idempotent.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "bootstrap" to confirm first-time production setup'
+        required: true
+
+concurrency:
+  group: dopemine-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Bootstrap dopemine.infodot.co.za
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Refuse unconfirmed runs
+        if: ${{ github.event.inputs.confirm != 'bootstrap' }}
+        run: |
+          echo '::error::Confirmation input was not "bootstrap" -- aborting.'
+          exit 1
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Bootstrap
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+              DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}" \
+              'bash -s' <<'BOOTSTRAP'
+          set -euo pipefail
+          APP="$DEPLOY_PATH"
+          DOCROOT="$(dirname "$APP")"
+          PHP=php
+
+          echo "== PHP: $($PHP -v | head -1)"
+
+          if [ ! -d "$APP/.git" ]; then
+            git clone https://github.com/sakhilebhayi/Dot.Dopemine.git "$APP"
+          else
+            git -C "$APP" fetch origin main
+            git -C "$APP" reset --hard origin/main
+          fi
+          cd "$APP"
+
+          composer install --no-interaction --optimize-autoloader --no-dev
+
+          if [ ! -f .env ]; then
+            cat > .env <<'ENV'
+          APP_NAME="Dot.Dopemine"
+          APP_ENV=production
+          APP_KEY=
+          APP_DEBUG=false
+          APP_URL=https://dopemine.infodot.co.za
+
+          LOG_CHANNEL=daily
+          LOG_LEVEL=info
+
+          DB_CONNECTION=sqlite
+
+          SESSION_DRIVER=database
+          SESSION_LIFETIME=120
+          SESSION_SECURE_COOKIE=true
+
+          CACHE_STORE=database
+          QUEUE_CONNECTION=sync
+
+          MAIL_MAILER=log
+          ENV
+            $PHP artisan key:generate --force
+          fi
+
+          # SQLite database file (DB_CONNECTION=sqlite defaults to
+          # database/database.sqlite relative to the app).
+          mkdir -p database
+          touch database/database.sqlite
+
+          $PHP artisan migrate --force
+
+          $PHP artisan config:cache
+          $PHP artisan route:cache
+          $PHP artisan view:cache
+          $PHP artisan event:cache
+
+          # Docroot wiring (mines pattern): shim + rewrite + asset links.
+          rm -f "$DOCROOT/index.html"
+          cat > "$DOCROOT/index.php" <<'SHIM'
+          <?php require __DIR__.'/dopemine/public/index.php';
+          SHIM
+          cp "$APP/public/.htaccess" "$DOCROOT/.htaccess"
+          for target in build images favicon.ico favicon-16x16.png favicon-32x32.png apple-touch-icon.png robots.txt; do
+            ln -sfn "dopemine/public/${target}" "$DOCROOT/${target}"
+          done
+
+          echo "== Bootstrap complete: $(git rev-parse --short HEAD)"
+          BOOTSTRAP
