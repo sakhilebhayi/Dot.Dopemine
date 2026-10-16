@@ -5,11 +5,8 @@ namespace Tests\Feature\Guardian;
 use App\Services\Guardian\Checks\CacheCheck;
 use App\Services\Guardian\Checks\DatabaseCheck;
 use App\Services\Guardian\Checks\ErrorRateCheck;
-
 use App\Services\Guardian\ErrorCounter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CoreChecksTest extends TestCase
