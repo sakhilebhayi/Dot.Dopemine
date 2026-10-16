@@ -36,3 +36,19 @@ jobs:
           echo "== $latest (last 120 lines)"
           tail -120 "$latest"
           LOGS
+
+      # Read-only: prove the nightly dopemine:backup-database ran (newest
+      # copies, sizes, dates). Fixed command, same rule as the step above.
+      - name: Backup evidence
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+              DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}" \
+              'bash -s' <<'BACKUPS'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          echo "== storage/backups (newest first)"
+          ls -lt storage/backups/dopemine-*.sqlite 2>/dev/null | head -5 || echo "no backups yet"
+          echo "== scheduler log lines about dopemine:backup-database (newest 5)"
+          grep -h "backup-database" storage/logs/*.log 2>/dev/null | tail -5 || true
+          BACKUPS
