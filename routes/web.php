@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\EcosystemAuthController;
+use App\Http\Controllers\GuardianHealthController;
 use App\Http\Controllers\SchedulerProbeController;
+use App\Http\Middleware\AuthenticateGuardian;
 use App\Models\Mechanic;
 use App\Models\MechanicDeployment;
 use App\Models\ProhibitedMetricPattern;
@@ -16,6 +18,13 @@ Route::get('/auth/ecosystem', [EcosystemAuthController::class, 'handle'])
 // scheduler has not been heard from. Watched from GitHub by
 // .github/workflows/scheduler-watchdog.yml.
 Route::get('/up/scheduler', SchedulerProbeController::class)->name('up.scheduler');
+
+// Guardian observability report for Dot.Brain (dot-guardian/v1): operational
+// internals, so bearer-authenticated with a dedicated token (503 when none is
+// configured) rather than public like /up and /up/scheduler.
+Route::get('/guardian/health', GuardianHealthController::class)
+    ->middleware(AuthenticateGuardian::class)
+    ->name('guardian.health');
 
 Route::get('/', fn () => view('welcome'));
 
