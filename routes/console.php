@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\BackupSqliteDatabase;
 use App\Console\Commands\ScanMechanicDecoupling;
 use App\Http\Controllers\SchedulerProbeController;
 use Illuminate\Foundation\Inspiring;
@@ -26,3 +27,8 @@ Schedule::command(ScanMechanicDecoupling::class)
 Schedule::call(fn () => Cache::forever(SchedulerProbeController::SCHEDULER_KEY, now()->toIso8601String()))
     ->everyMinute()
     ->name('scheduler-heartbeat');
+
+// Nightly copy of the SQLite file (the certified-mechanic catalogue and deployment ledger exist nowhere else). The five SQLite-backed Dot apps
+// share one host, so each one backs up at its own minute. No-op on other
+// database drivers. See docs/superpowers or the deploy README for restore.
+Schedule::command(BackupSqliteDatabase::class)->dailyAt('02:25')->onOneServer();
