@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\ContributionEventController;
+use App\Http\Controllers\Api\PointsSummaryController;
 use App\Http\Controllers\Intelligence\InterventionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,3 +17,14 @@ Route::get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->prefix('intelligence')->group(function () {
     Route::post('/interventions', [InterventionController::class, 'store']);
 });
+
+// Platforms report what happened to a contribution (signed server to server, no session). The Dot Points ledger
+// decides what it is worth; see config/points.php and App\Services\Points\ContributionEventProcessor.
+Route::post('/ingest/contributions', ContributionEventController::class)
+    ->middleware('throttle:600,1')
+    ->name('api.ingest.contributions');
+
+// What a person's profile on a platform shows: balance, expiring points, history. Signed like the intake.
+Route::get('/points/{userUuid}', PointsSummaryController::class)
+    ->middleware('throttle:300,1')
+    ->name('api.points.summary');
