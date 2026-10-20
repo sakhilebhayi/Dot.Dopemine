@@ -39,6 +39,12 @@ class UserFactory extends Factory
         ];
     }
 
+    /** An administrator of the Dot Points back-office. */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_admin' => true]);
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */

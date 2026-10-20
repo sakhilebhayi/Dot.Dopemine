@@ -50,6 +50,8 @@ class User extends Authenticatable implements PasskeyUser
         'two_factor_secret',
     ];
 
+    // `is_admin` is deliberately not fillable: it is set only by `php artisan points:make-admin`.
+
     /**
      * The accessors to append to the model's array form.
      *
@@ -69,6 +71,7 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 }

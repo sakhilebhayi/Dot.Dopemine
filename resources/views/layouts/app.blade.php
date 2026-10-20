@@ -79,6 +79,17 @@
         .dot-loading-overlay { display:flex; align-items:center; justify-content:center; padding:2.5rem 0; }
         .dot-spin { animation: dot-spin 0.9s linear infinite; }
         @keyframes dot-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        /* Narrow screens: the navigation becomes a block above the page instead of a fixed column that covers it. */
+        @media (max-width: 820px) {
+            .sidebar { position:static; width:auto; height:auto; border-right:0; border-bottom:1px solid rgba(255,255,255,0.06); overflow:visible; }
+            .sidebar-brand { padding-bottom:8px; }
+            .sidebar-nav { display:flex; gap:4px; overflow-x:auto; padding-bottom:10px; scrollbar-width:thin; }
+            .sidebar-nav .nav-item { flex-shrink:0; white-space:nowrap; margin-bottom:0; }
+            .sidebar-nav .nav-section-label, .sidebar-nav .sidebar-divider { display:none; }
+            .sidebar-footer { display:none; }
+            .topbar { position:static; left:0; }
+            .content-wrap { margin-left:0; padding-top:0; min-height:0; }
+        }
     </style>
     @livewireStyles
     {{-- No stand-alone Alpine here: Livewire 3 bundles and starts its own (@livewireScripts). A second copy
@@ -116,6 +127,29 @@
                 <span class="material-symbols-rounded nav-icon">rocket_launch</span>
                 Our Deployments
             </a>
+            @can('manage-points')
+            <div class="nav-section-label">Dot Points admin</div>
+            <a href="{{ route('admin.points.redemptions') }}" class="nav-item {{ request()->routeIs('admin.points.redemptions*') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">redeem</span>
+                Redemption queue
+            </a>
+            <a href="{{ route('admin.points.rules') }}" class="nav-item {{ request()->routeIs('admin.points.rules*') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">rule</span>
+                Reward rules
+            </a>
+            <a href="{{ route('admin.points.rewards') }}" class="nav-item {{ request()->routeIs('admin.points.rewards*') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">sell</span>
+                Rewards catalogue
+            </a>
+            <a href="{{ route('admin.points.ledger') }}" class="nav-item {{ request()->routeIs('admin.points.ledger') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">receipt_long</span>
+                Ledger explorer
+            </a>
+            <a href="{{ route('admin.points.audit') }}" class="nav-item {{ request()->routeIs('admin.points.audit') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">history</span>
+                Audit log
+            </a>
+            @endcan
             <div class="sidebar-divider" style="margin:10px 0;"></div>
             <a href="{{ route('profile.show') }}" class="nav-item {{ request()->routeIs('profile.show') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">manage_accounts</span>

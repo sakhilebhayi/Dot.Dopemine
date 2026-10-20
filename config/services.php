@@ -35,6 +35,16 @@ return [
         ],
     ],
 
+    // Expiry warnings go to Dot.Notify's ingest API (server to server). The URL and the secret must both be set or
+    // nothing is sent. The secret is the value of NOTIFY_INGEST_SECRET_DOPEMINE in Dot.Notify's .env; the platform key
+    // is how Notify knows which secret to check.
+    'notify' => [
+        'url' => env('NOTIFY_INGEST_URL'),
+        'secret' => env('NOTIFY_INGEST_SECRET'),
+        'platform' => env('NOTIFY_PLATFORM_KEY', 'dopemine'),
+        'timeout' => 5,
+    ],
+
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
