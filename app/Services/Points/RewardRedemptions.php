@@ -44,6 +44,16 @@ class RewardRedemptions
                 }
             }
 
+            // Stock is claimed atomically (one conditional UPDATE), so two people cannot take the last unit. It sits
+            // inside the transaction: if the points turn out to be missing, the claim is rolled back with it.
+            $stocked = Reward::whereKey($reward->id)
+                ->where(fn ($q) => $q->whereNull('stock')->orWhere('stock', '>', 0))
+                ->update(['stock' => DB::raw('CASE WHEN stock IS NULL THEN NULL ELSE stock - 1 END')]);
+
+            if ($stocked === 0) {
+                throw new RedemptionRefused('This reward is out of stock.');
+            }
+
             $this->ledger->redeem($userUuid, $reward->price_points, 'redemption:'.$idempotencyKey, 'Redeemed: '.$reward->title, ['reward' => $reward->key]);
 
             return Redemption::create([
@@ -56,27 +66,41 @@ class RewardRedemptions
         });
     }
 
+    /**
+     * Mark a pending redemption delivered. The status change is one conditional UPDATE, so two operators pressing
+     * the button at once cannot both win; the loser gets the same 422 as for any other non-pending redemption.
+     */
     public function fulfil(Redemption $redemption, string $reference, string $by): Redemption
     {
-        abort_unless($redemption->status === 'pending', 422, 'Only a pending redemption can be fulfilled.');
-        $redemption->forceFill(['status' => 'fulfilled', 'fulfilment_ref' => $reference, 'fulfilled_by' => $by])->save();
+        $claimed = Redemption::whereKey($redemption->id)->where('status', 'pending')
+            ->update(['status' => 'fulfilled', 'fulfilment_ref' => $reference, 'fulfilled_by' => $by, 'updated_at' => now()]);
 
-        return $redemption;
+        abort_unless($claimed === 1, 422, 'Only a pending redemption can be fulfilled.');
+
+        return $redemption->refresh();
     }
 
-    /** A redemption that could not be delivered, or that was cancelled: the points come back as a new lot. */
+    /**
+     * A redemption that could not be delivered, or that was cancelled: the points come back as a new lot (a
+     * `refund` entry, keyed on the redemption so a repeat can never refund twice) and a unit of limited stock is
+     * returned. The status change is the single conditional UPDATE that decides who gets to do this.
+     */
     public function fail(Redemption $redemption, string $note, bool $cancelled = false): Redemption
     {
-        abort_unless($redemption->status === 'pending', 422, 'Only a pending redemption can be failed or cancelled.');
-
         DB::transaction(function () use ($redemption, $note, $cancelled): void {
+            $claimed = Redemption::whereKey($redemption->id)->where('status', 'pending')
+                ->update(['status' => $cancelled ? 'cancelled' : 'failed', 'note' => $note, 'updated_at' => now()]);
+
+            abort_unless($claimed === 1, 422, 'Only a pending redemption can be failed or cancelled.');
+
             $entries = LedgerEntry::where('user_uuid', $redemption->user_uuid)
                 ->where('idempotency_key', 'like', 'redemption:'.$redemption->idempotency_key.':%')->get()->all();
 
             $this->ledger->refund($entries, 'refund:'.$redemption->uuid, $note);
-            $redemption->forceFill(['status' => $cancelled ? 'cancelled' : 'failed', 'note' => $note])->save();
+
+            Reward::whereKey($redemption->reward_id)->whereNotNull('stock')->increment('stock');
         });
 
-        return $redemption;
+        return $redemption->refresh();
     }
 }

@@ -1,9 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\Points\AuditController;
+use App\Http\Controllers\Admin\Points\LedgerExplorerController;
+use App\Http\Controllers\Admin\Points\RedemptionsController;
+use App\Http\Controllers\Admin\Points\RewardRulesController;
+use App\Http\Controllers\Admin\Points\RewardsController;
 use App\Http\Controllers\Auth\EcosystemAuthController;
 use App\Http\Controllers\GuardianHealthController;
 use App\Http\Controllers\SchedulerProbeController;
 use App\Http\Middleware\AuthenticateGuardian;
+use App\Http\Middleware\EnsurePointsAdmin;
 use App\Models\Mechanic;
 use App\Models\MechanicDeployment;
 use App\Models\ProhibitedMetricPattern;
@@ -57,4 +63,31 @@ Route::middleware([
 
     Route::get('/mechanics', fn () => view('dopemine.catalog'))->name('mechanics.index');
     Route::get('/mechanics/deployments', fn () => view('dopemine.deployments'))->name('mechanics.deployments');
+});
+
+// The Dot Points back-office. Administrators only (EnsurePointsAdmin: Gate `manage-points`, set with `php artisan points:make-admin`);
+// everyone else, signed in or not, is turned away before any controller runs.
+Route::middleware([
+    'auth:sanctum',
+    config('jetstream.auth_session'),
+    'verified',
+    EnsurePointsAdmin::class,
+])->prefix('admin/points')->name('admin.points.')->group(function () {
+    Route::get('/', fn () => redirect()->route('admin.points.redemptions'))->name('index');
+
+    Route::get('/redemptions', [RedemptionsController::class, 'index'])->name('redemptions');
+    Route::post('/redemptions/{redemption:uuid}/fulfil', [RedemptionsController::class, 'fulfil'])->name('redemptions.fulfil');
+    Route::post('/redemptions/{redemption:uuid}/fail', [RedemptionsController::class, 'fail'])->name('redemptions.fail');
+
+    Route::get('/rules', [RewardRulesController::class, 'index'])->name('rules');
+    Route::post('/rules/{key}', [RewardRulesController::class, 'publish'])->where('key', '[A-Za-z0-9._-]+')->name('rules.publish');
+
+    Route::get('/rewards', [RewardsController::class, 'index'])->name('rewards');
+    Route::post('/rewards', [RewardsController::class, 'store'])->name('rewards.store');
+    Route::put('/rewards/{reward}', [RewardsController::class, 'update'])->name('rewards.update');
+    Route::post('/rewards/{reward}/retire', [RewardsController::class, 'retire'])->name('rewards.retire');
+    Route::post('/rewards/{reward}/reinstate', [RewardsController::class, 'reinstate'])->name('rewards.reinstate');
+
+    Route::get('/ledger', [LedgerExplorerController::class, 'index'])->name('ledger');
+    Route::get('/audit', [AuditController::class, 'index'])->name('audit');
 });

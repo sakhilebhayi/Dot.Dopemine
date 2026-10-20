@@ -3,6 +3,7 @@
 use App\Console\Commands\BackupSqliteDatabase;
 use App\Console\Commands\ExpirePoints;
 use App\Console\Commands\ScanMechanicDecoupling;
+use App\Console\Commands\SendExpiryWarnings;
 use App\Http\Controllers\SchedulerProbeController;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -23,6 +24,10 @@ Schedule::command(ScanMechanicDecoupling::class)
 // Dot Points: lots lapse 12 months after they are granted. The ledger refuses to spend expired points either way;
 // this writes the `expire` entries so the history shows it. Idempotent.
 Schedule::command(ExpirePoints::class)->dailyAt('03:10')->withoutOverlapping()->onOneServer();
+
+// Dot Points: the single 30-day heads-up, sent through Dot.Notify. Hourly so a failed delivery is retried on its
+// backoff schedule; each run only touches warnings that are due. Does nothing until Notify is configured.
+Schedule::command(SendExpiryWarnings::class)->hourlyAt(40)->withoutOverlapping()->onOneServer();
 
 // Liveness of the platform itself. /up/scheduler reports this heartbeat's
 // age and answers 503 once it is older than

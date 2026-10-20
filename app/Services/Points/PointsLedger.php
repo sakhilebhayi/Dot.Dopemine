@@ -98,6 +98,18 @@ class PointsLedger
     }
 
     /**
+     * Every lot a person ever had, spent or lapsed or not, each with a `remaining` attribute. Newest first. For
+     * read-only views (the back-office ledger explorer); spending only ever uses openLots().
+     *
+     * @return Collection<int, LedgerEntry>
+     */
+    public function lots(string $userUuid): Collection
+    {
+        return $this->lotsQuery($userUuid)->orderByDesc('ledger_entries.id')->get()
+            ->each(fn (LedgerEntry $lot) => $lot->setAttribute('remaining', (int) $lot->remaining));
+    }
+
+    /**
      * Spend points, oldest-expiring lots first. All or nothing: never more than the balance.
      *
      * @return list<LedgerEntry> one entry per lot drawn on
