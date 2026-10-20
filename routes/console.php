@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\BackupSqliteDatabase;
+use App\Console\Commands\ExpirePoints;
 use App\Console\Commands\ScanMechanicDecoupling;
 use App\Http\Controllers\SchedulerProbeController;
 use Illuminate\Foundation\Inspiring;
@@ -18,6 +19,10 @@ Artisan::command('inspire', function () {
 Schedule::command(ScanMechanicDecoupling::class)
     ->daily()
     ->withoutOverlapping();
+
+// Dot Points: lots lapse 12 months after they are granted. The ledger refuses to spend expired points either way;
+// this writes the `expire` entries so the history shows it. Idempotent.
+Schedule::command(ExpirePoints::class)->dailyAt('03:10')->withoutOverlapping()->onOneServer();
 
 // Liveness of the platform itself. /up/scheduler reports this heartbeat's
 // age and answers 503 once it is older than
