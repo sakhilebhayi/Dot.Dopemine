@@ -30,6 +30,13 @@ return [
         'stop_after_failures' => 3,
     ],
 
+    // Spending through the platform API: a person can ask to redeem this many times per window (new requests only;
+    // replaying an idempotency key is free). Past it the API answers 429 `rate_limited`.
+    'redemptions' => [
+        'rate_limit' => (int) env('POINTS_REDEMPTION_RATE_LIMIT', 10),
+        'rate_window_seconds' => 3600,
+    ],
+
     // Points are worth nothing in cash and cannot be transferred; they lapse this many months after they are granted.
     'lifetime_months' => 12,
 ];

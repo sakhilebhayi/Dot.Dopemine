@@ -32,6 +32,7 @@ class PointsSummaryController extends Controller
             'total_earned' => (int) LedgerEntry::where('user_uuid', $userUuid)->whereIn('type', LedgerEntry::LOT_TYPES)->where('type', LedgerEntry::AWARD)->sum('points'),
             'expiring_soon' => $soon->isEmpty() ? null : ['points' => (int) $soon->sum('remaining'), 'first_at' => $soon->min('expires_at')->toIso8601String()],
             'next_expiry' => $lots->isEmpty() ? null : $lots->first()->expires_at->toIso8601String(),
+            'next_expiry_points' => $lots->isEmpty() ? null : (int) $lots->first()->remaining,
             'history' => $ledger->history($userUuid, 50)->map(fn (LedgerEntry $e) => [
                 'at' => $e->created_at->toIso8601String(),
                 'type' => $e->type,

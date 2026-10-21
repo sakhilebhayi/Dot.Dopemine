@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\ContributionEventController;
+use App\Http\Controllers\Api\PointsRedemptionController;
+use App\Http\Controllers\Api\PointsRewardsController;
 use App\Http\Controllers\Api\PointsSummaryController;
 use App\Http\Controllers\Intelligence\InterventionController;
+use App\Http\Middleware\VerifyPointsSignature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +26,14 @@ Route::middleware('auth:sanctum')->prefix('intelligence')->group(function () {
 Route::post('/ingest/contributions', ContributionEventController::class)
     ->middleware('throttle:600,1')
     ->name('api.ingest.contributions');
+
+// The price list and spending, for a platform's server on behalf of a signed-in person (docs/points-redemption-api.md).
+// Registered BEFORE the summary route, whose {userUuid} would otherwise swallow `rewards` and `redemptions`.
+Route::middleware(['throttle:300,1', VerifyPointsSignature::class])->prefix('points')->group(function () {
+    Route::get('/rewards', PointsRewardsController::class)->name('api.points.rewards');
+    Route::get('/redemptions', [PointsRedemptionController::class, 'index'])->name('api.points.redemptions.index');
+    Route::post('/redemptions', [PointsRedemptionController::class, 'store'])->name('api.points.redemptions.store');
+});
 
 // What a person's profile on a platform shows: balance, expiring points, history. Signed like the intake.
 Route::get('/points/{userUuid}', PointsSummaryController::class)

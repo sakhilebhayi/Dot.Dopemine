@@ -4,6 +4,9 @@ namespace App\Services\Points;
 
 use App\Exceptions\Points\InsufficientPoints;
 use App\Exceptions\Points\RedemptionRefused;
+use App\Exceptions\Points\RewardMonthlyLimitReached;
+use App\Exceptions\Points\RewardNotAvailable;
+use App\Exceptions\Points\RewardOutOfStock;
 use App\Models\LedgerEntry;
 use App\Models\Redemption;
 use App\Models\Reward;
@@ -20,7 +23,7 @@ class RewardRedemptions
     public function __construct(private readonly PointsLedger $ledger) {}
 
     /**
-     * @throws RedemptionRefused
+     * @throws RedemptionRefused (RewardNotAvailable, RewardMonthlyLimitReached or RewardOutOfStock)
      * @throws InsufficientPoints
      */
     public function redeem(string $userUuid, Reward $reward, string $idempotencyKey): Redemption
@@ -30,7 +33,7 @@ class RewardRedemptions
         }
 
         if (! $reward->active) {
-            throw new RedemptionRefused('This reward is not available.');
+            throw new RewardNotAvailable('This reward is not available.');
         }
 
         return DB::transaction(function () use ($userUuid, $reward, $idempotencyKey) {
@@ -40,7 +43,7 @@ class RewardRedemptions
                     ->where('created_at', '>=', now()->startOfMonth())->count();
 
                 if ($taken >= $reward->monthly_cap) {
-                    throw new RedemptionRefused('This reward has reached its limit for this month. It resets next month.');
+                    throw new RewardMonthlyLimitReached('This reward has reached its limit for this month. It resets next month.');
                 }
             }
 
@@ -51,7 +54,7 @@ class RewardRedemptions
                 ->update(['stock' => DB::raw('CASE WHEN stock IS NULL THEN NULL ELSE stock - 1 END')]);
 
             if ($stocked === 0) {
-                throw new RedemptionRefused('This reward is out of stock.');
+                throw new RewardOutOfStock('This reward is out of stock.');
             }
 
             $this->ledger->redeem($userUuid, $reward->price_points, 'redemption:'.$idempotencyKey, 'Redeemed: '.$reward->title, ['reward' => $reward->key]);
