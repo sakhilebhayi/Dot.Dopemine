@@ -143,8 +143,10 @@ return [
     |
     */
 
-    'features' => [
-        Features::registration(),
+    'features' => array_values(array_filter([
+        // Dopemine is an internal service: accounts are created by an administrator, not by the public.
+        // Set DOPEMINE_ALLOW_REGISTRATION=true only for a deliberate, temporary sign-up window.
+        env('DOPEMINE_ALLOW_REGISTRATION', false) ? Features::registration() : null,
         Features::resetPasswords(),
         // Features::emailVerification(),
         Features::updateProfileInformation(),
@@ -154,6 +156,6 @@ return [
             'confirmPassword' => true,
             // 'window' => 0,
         ]),
-    ],
+    ])),
 
 ];

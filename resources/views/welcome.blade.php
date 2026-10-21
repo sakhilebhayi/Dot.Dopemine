@@ -155,9 +155,15 @@
 
                         @guest
                             <div class="flex flex-wrap items-center gap-4">
-                                <a href="{{ route('register') }}" class="press px-7 py-3.5 bg-[var(--ink)] hover:bg-[var(--rust)] text-white font-display-upright font-semibold rounded-full transition-colors">
-                                    Create account
-                                </a>
+                                @if (Route::has('register'))
+                                    <a href="{{ route('register') }}" class="press px-7 py-3.5 bg-[var(--ink)] hover:bg-[var(--rust)] text-white font-display-upright font-semibold rounded-full transition-colors">
+                                        Create account
+                                    </a>
+                                @else
+                                    <a href="{{ route('login') }}" class="press px-7 py-3.5 bg-[var(--ink)] hover:bg-[var(--rust)] text-white font-display-upright font-semibold rounded-full transition-colors">
+                                        Sign in
+                                    </a>
+                                @endif
                                 <a href="#prohibited" class="press flex items-center gap-2 px-7 py-3.5 text-[var(--paper)] font-medium rounded-full border border-[rgba(244,243,239,0.35)] hover:border-[var(--rust-soft)] transition-colors">
                                     See what we won't build
                                 </a>
@@ -315,14 +321,16 @@
                     Bring a mechanic in. We'll run the acid test.
                 </h2>
                 <p class="text-[var(--ink-soft)] leading-relaxed mb-10 max-w-lg mx-auto">
-                    Sign in with your Dot Ecosystem account or create one to browse the certified catalog.
+                    Sign in with your Dot Ecosystem account to browse the certified catalog.
                 </p>
 
                 @guest
                     <div class="flex flex-wrap justify-center gap-4">
-                        <a href="{{ route('register') }}" class="press px-8 py-3.5 bg-[var(--ink)] hover:bg-[var(--rust)] text-white font-display-upright font-semibold rounded-full transition-colors">
-                            Create account
-                        </a>
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}" class="press px-8 py-3.5 bg-[var(--ink)] hover:bg-[var(--rust)] text-white font-display-upright font-semibold rounded-full transition-colors">
+                                Create account
+                            </a>
+                        @endif
                         <a href="{{ route('login') }}" class="press px-8 py-3.5 text-[var(--ink)] font-medium rounded-full border border-[var(--line)] hover:border-[var(--rust-soft)] transition-colors">
                             Sign in
                         </a>
