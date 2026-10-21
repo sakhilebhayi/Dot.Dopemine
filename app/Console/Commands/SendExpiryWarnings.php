@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\Points\ExpiryWarnings;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 /** Sends the 30-day "your points are about to lapse" heads-up through Dot.Notify. Safe to run any number of times. */
 class SendExpiryWarnings extends Command
@@ -14,6 +15,15 @@ class SendExpiryWarnings extends Command
 
     public function handle(ExpiryWarnings $warnings): int
     {
+        $mode = (string) config('points.expiry_delivery', 'infodot');
+
+        if ($mode !== 'notify') {
+            Log::info('Expiry warnings: the Dot.Notify push is off (POINTS_EXPIRY_DELIVERY='.$mode.'); nothing sent.');
+            $this->line('Expiry warning delivery mode is "'.$mode.'"; the Dot.Notify push only runs in "notify" mode.');
+
+            return self::SUCCESS;
+        }
+
         $summary = $warnings->run();
 
         if (! $summary['configured']) {

@@ -173,14 +173,13 @@ class ExpiryWarnings
     /** @param  array<string, mixed>  $summary */
     private function scheduleRetry(ExpiryWarning $warning, int $attempts, NotifyResult $result, array &$summary): void
     {
-        if ($attempts >= (int) config('points.expiry_warning.max_attempts', 6)) {
+        $minutes = ExpiryWarning::backoffMinutesAfter($attempts);
+
+        if ($minutes === null) {
             $this->giveUp($warning, $attempts, $result, $summary);
 
             return;
         }
-
-        $steps = (array) config('points.expiry_warning.backoff_minutes', [60]);
-        $minutes = (int) ($steps[min($attempts, count($steps)) - 1] ?? end($steps));
 
         $warning->forceFill(['attempts' => $attempts, 'next_attempt_at' => now()->addMinutes($minutes), 'last_error' => $result->error])->save();
         $summary['retrying']++;

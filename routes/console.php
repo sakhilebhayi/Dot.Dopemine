@@ -25,8 +25,9 @@ Schedule::command(ScanMechanicDecoupling::class)
 // this writes the `expire` entries so the history shows it. Idempotent.
 Schedule::command(ExpirePoints::class)->dailyAt('03:10')->withoutOverlapping()->onOneServer();
 
-// Dot Points: the single 30-day heads-up, sent through Dot.Notify. Hourly so a failed delivery is retried on its
-// backoff schedule; each run only touches warnings that are due. Does nothing until Notify is configured.
+// Dot Points: the single 30-day heads-up pushed through Dot.Notify. Only acts when POINTS_EXPIRY_DELIVERY=notify (the
+// default, `infodot`, has InfoDot pull warnings instead: docs/points-expiry-warnings-api.md). Hourly so a failed
+// delivery is retried on its backoff schedule; each run only touches warnings that are due.
 Schedule::command(SendExpiryWarnings::class)->hourlyAt(40)->withoutOverlapping()->onOneServer();
 
 // Liveness of the platform itself. /up/scheduler reports this heartbeat's

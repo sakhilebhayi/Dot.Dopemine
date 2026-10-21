@@ -27,6 +27,21 @@ class ExpiryWarning extends Model
         return ['warned_at' => 'datetime', 'next_attempt_at' => 'datetime', 'delivered_at' => 'datetime', 'attempts' => 'integer'];
     }
 
+    /**
+     * The wait before the next attempt once `$attempts` attempts have failed, or null when the attempts are used up
+     * and the warning is to be given up on. One schedule for every delivery path (Notify push and InfoDot pull).
+     */
+    public static function backoffMinutesAfter(int $attempts): ?int
+    {
+        if ($attempts >= (int) config('points.expiry_warning.max_attempts', 6)) {
+            return null;
+        }
+
+        $steps = array_values((array) config('points.expiry_warning.backoff_minutes', [60]));
+
+        return (int) ($steps[min(max($attempts, 1), count($steps)) - 1] ?? end($steps));
+    }
+
     public function lot(): BelongsTo
     {
         return $this->belongsTo(LedgerEntry::class, 'lot_id');

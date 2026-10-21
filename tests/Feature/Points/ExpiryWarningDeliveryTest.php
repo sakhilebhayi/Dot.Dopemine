@@ -41,7 +41,7 @@ class ExpiryWarningDeliveryTest extends TestCase
         $this->ledger = app(PointsLedger::class);
         $this->book = new AddressBook;
 
-        config(['services.notify.url' => self::URL, 'services.notify.secret' => self::SECRET, 'services.notify.platform' => 'dopemine']);
+        config(['points.expiry_delivery' => 'notify', 'services.notify.url' => self::URL, 'services.notify.secret' => self::SECRET, 'services.notify.platform' => 'dopemine']);
 
         $this->app->instance(ExpiryWarningRecipients::class, $this->book);
     }

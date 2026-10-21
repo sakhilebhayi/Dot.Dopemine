@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ContributionEventController;
+use App\Http\Controllers\Api\PointsExpiryWarningController;
 use App\Http\Controllers\Api\PointsRedemptionController;
 use App\Http\Controllers\Api\PointsRewardsController;
 use App\Http\Controllers\Api\PointsSummaryController;
@@ -33,6 +34,13 @@ Route::middleware(['throttle:300,1', VerifyPointsSignature::class])->prefix('poi
     Route::get('/rewards', PointsRewardsController::class)->name('api.points.rewards');
     Route::get('/redemptions', [PointsRedemptionController::class, 'index'])->name('api.points.redemptions.index');
     Route::post('/redemptions', [PointsRedemptionController::class, 'store'])->name('api.points.redemptions.store');
+});
+
+// Expiry heads-ups InfoDot pulls and delivers itself (docs/points-expiry-warnings-api.md). Own rate-limit bucket, and
+// registered BEFORE the summary route like the group above.
+Route::middleware(['throttle:120,1,expiry-warnings', VerifyPointsSignature::class])->prefix('points/expiry-warnings')->group(function () {
+    Route::get('/', [PointsExpiryWarningController::class, 'index'])->name('api.points.expiry-warnings.index');
+    Route::post('/{warning}/result', [PointsExpiryWarningController::class, 'result'])->name('api.points.expiry-warnings.result');
 });
 
 // What a person's profile on a platform shows: balance, expiring points, history. Signed like the intake.
