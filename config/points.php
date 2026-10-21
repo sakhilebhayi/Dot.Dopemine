@@ -18,7 +18,16 @@ return [
     'reward_company_visibility' => (bool) env('POINTS_REWARD_COMPANY_VISIBILITY', false),
 
     /*
-    | The single heads-up before a lot lapses, delivered through Dot.Notify (see App\Services\Points\ExpiryWarnings).
+    | How the single expiry heads-up reaches a person (exactly one path is ever active):
+    |   infodot  InfoDot PULLS pending warnings (GET /api/points/expiry-warnings) and emails the person itself,
+    |            reporting back per warning. Dopemine never holds or receives an address. This is the default.
+    |   notify   the scheduled `points:warn-expiring` command pushes through Dot.Notify (needs a recipient lookup).
+    |   none     warnings are not delivered by anyone.
+    */
+    'expiry_delivery' => env('POINTS_EXPIRY_DELIVERY', 'infodot'),
+
+    /*
+    | The single heads-up before a lot lapses (see `expiry_delivery` for who delivers it; the Notify path is App\Services\Points\ExpiryWarnings) (see App\Services\Points\ExpiryWarnings).
     | A failed delivery is retried with a growing wait; after `max_attempts` it is given up on and left visible.
     */
     'expiry_warning' => [
