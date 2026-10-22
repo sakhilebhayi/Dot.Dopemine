@@ -165,7 +165,7 @@ jobs:
           coverage: none
       - name: Composer audit
         continue-on-error: true
-        run: composer audit --no-interaction || echo "::warning::composer audit reports advisories (not blocking)"
+        run: composer audit --locked --no-interaction || echo "::warning::composer audit reports advisories (not blocking)"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
