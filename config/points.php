@@ -39,6 +39,19 @@ return [
         'stop_after_failures' => 3,
     ],
 
+    /*
+    | Weekly / monthly summaries of what a person earned (App\Services\Points\DigestPull). InfoDot PULLS them
+    | (GET /api/points/digests), composes and sends the message under the person's own preferences and reports back per
+    | digest. OFF by default: while `enabled` is false the API answers an empty list and nothing is produced.
+    | `max_per_pull` caps how many digests one pull creates and returns (the rest follow on the next pull).
+    */
+    'digests' => [
+        'enabled' => (bool) env('POINTS_DIGESTS_ENABLED', false),
+        'max_per_pull' => (int) env('POINTS_DIGEST_MAX_PER_PULL', 200),
+        'max_attempts' => 5,
+        'backoff_minutes' => [60, 120, 240, 480, 960],
+    ],
+
     // Spending through the platform API: a person can ask to redeem this many times per window (new requests only;
     // replaying an idempotency key is free). Past it the API answers 429 `rate_limited`.
     'redemptions' => [

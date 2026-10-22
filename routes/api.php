@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ContributionEventController;
+use App\Http\Controllers\Api\PointsDigestController;
 use App\Http\Controllers\Api\PointsExpiryWarningController;
 use App\Http\Controllers\Api\PointsRedemptionController;
 use App\Http\Controllers\Api\PointsRewardsController;
@@ -41,6 +42,13 @@ Route::middleware(['throttle:300,1', VerifyPointsSignature::class])->prefix('poi
 Route::middleware(['throttle:120,1,expiry-warnings', VerifyPointsSignature::class])->prefix('points/expiry-warnings')->group(function () {
     Route::get('/', [PointsExpiryWarningController::class, 'index'])->name('api.points.expiry-warnings.index');
     Route::post('/{warning}/result', [PointsExpiryWarningController::class, 'result'])->name('api.points.expiry-warnings.result');
+});
+
+// Weekly / monthly summaries InfoDot pulls and delivers itself (docs/points-digests-api.md). Off unless
+// POINTS_DIGESTS_ENABLED; own rate-limit bucket; registered BEFORE the summary route like the groups above.
+Route::middleware(['throttle:120,1,digests', VerifyPointsSignature::class])->prefix('points/digests')->group(function () {
+    Route::get('/', [PointsDigestController::class, 'index'])->name('api.points.digests.index');
+    Route::post('/{digest}/result', [PointsDigestController::class, 'result'])->name('api.points.digests.result');
 });
 
 // What a person's profile on a platform shows: balance, expiring points, history. Signed like the intake.
