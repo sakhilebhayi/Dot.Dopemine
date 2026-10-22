@@ -75,6 +75,7 @@
             <ul class="pa-tabs">
                 @foreach ([
                     'redemptions' => 'Redemption queue',
+                    'approvals' => 'Pending approval',
                     'rules' => 'Reward rules',
                     'rewards' => 'Rewards catalogue',
                     'ledger' => 'Ledger explorer',

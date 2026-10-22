@@ -304,6 +304,12 @@ class PointsLedger
         DB::table('expiry_warnings')->insertOrIgnore(['lot_id' => $lot->id, 'user_uuid' => $lot->user_uuid, 'points' => $lot->remaining, 'warned_at' => now()]);
     }
 
+    /** What an award under this rule is worth for a requested amount: the base value, or the request clamped into the rule's range. */
+    public function amountFor(RewardRule $rule, ?int $points = null): int
+    {
+        return $this->resolvePoints($rule, $points);
+    }
+
     private function resolvePoints(RewardRule $rule, ?int $points): int
     {
         if ($rule->min_points !== null && $rule->max_points !== null && $points !== null) {
