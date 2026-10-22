@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Validator;
  *
  * The platform is identified by the secret that signed the request, never by a field in it. An unsigned, stale or
  * wrongly signed request is refused before anything is read. An event id seen before is acknowledged and ignored.
+ *
+ * An event that refers to a contribution this service has not been told about yet (an approval or a verification
+ * that overtook the publication it judges) is answered 409 `contribution_not_ready` with `Retry-After`, and its event id is NOT
+ * remembered: InfoDot's outbox retries 409, 425, 429 and 5xx with growing delays (and holds later events for that contribution behind it), so the same event is processed afresh once
+ * the publication has arrived. Every other outcome is final and is answered 202.
  */
 class ContributionEventController extends Controller
 {
@@ -44,6 +49,14 @@ class ContributionEventController extends Controller
             ? $processor->handle($platform, $data)
             : ['outcome' => 'unsupported', 'detail' => 'This event type is not handled yet.'];
 
+        if ($result['outcome'] === ContributionEventProcessor::NOT_READY) {
+            return response()->json([
+                'code' => 'contribution_not_ready',
+                'message' => $result['detail'],
+                'status' => $result['outcome'],
+            ], 409, ['Retry-After' => '60']);
+        }
+
         RewardEvent::create([
             'event_id' => $data['event_id'],
             'platform' => $platform,
@@ -53,7 +66,7 @@ class ContributionEventController extends Controller
             'detail' => $result['detail'],
         ]);
 
-        return response()->json(['status' => $result['outcome']], 202);
+        return response()->json(array_filter(['status' => $result['outcome'], 'detail' => $result['detail']], fn ($value) => $value !== null), 202);
     }
 
     /** The platform whose configured secret signed this request, or null. */

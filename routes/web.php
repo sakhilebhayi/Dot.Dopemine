@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\Points\ApprovalsController;
 use App\Http\Controllers\Admin\Points\AuditController;
 use App\Http\Controllers\Admin\Points\LedgerExplorerController;
 use App\Http\Controllers\Admin\Points\RedemptionsController;
@@ -78,6 +79,9 @@ Route::middleware([
     Route::get('/redemptions', [RedemptionsController::class, 'index'])->name('redemptions');
     Route::post('/redemptions/{redemption:uuid}/fulfil', [RedemptionsController::class, 'fulfil'])->name('redemptions.fulfil');
     Route::post('/redemptions/{redemption:uuid}/fail', [RedemptionsController::class, 'fail'])->name('redemptions.fail');
+
+    Route::get('/approvals', [ApprovalsController::class, 'index'])->name('approvals');
+    Route::post('/approvals/{contribution:uuid}/approve', [ApprovalsController::class, 'approve'])->name('approvals.approve');
 
     Route::get('/rules', [RewardRulesController::class, 'index'])->name('rules');
     Route::post('/rules/{key}', [RewardRulesController::class, 'publish'])->where('key', '[A-Za-z0-9._-]+')->name('rules.publish');

@@ -216,7 +216,7 @@ class ContributionIntakeTest extends TestCase
 
     public function test_an_event_type_not_handled_yet_is_recorded_and_pays_nothing(): void
     {
-        $this->send($this->event('infodot.knowledge.adopted', 'infodot:solution:1'))->assertStatus(202)->assertJson(['status' => 'unsupported']);
+        $this->send($this->event('infodot.something.not.built.yet', 'infodot:solution:1'))->assertStatus(202)->assertJson(['status' => 'unsupported']);
 
         $this->assertSame(0, $this->balance());
         $this->assertSame('unsupported', RewardEvent::first()->outcome);
