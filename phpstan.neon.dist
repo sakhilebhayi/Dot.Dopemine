@@ -6,6 +6,6 @@ parameters:
     paths:
         - app
     excludePaths:
-        - app/Console/Kernel.php
+        - app/Console/Kernel.php (?)
     parallel:
         maximumNumberOfProcesses: 1
