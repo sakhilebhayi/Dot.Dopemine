@@ -1,0 +1,193 @@
+name: CI
+
+# Runs on every pull request to main and on push to main. It can also be called
+# from another workflow (workflow_call) so a deploy can gate on it later; the
+# deploy workflow is not wired to it by this change.
+#
+# What gates and what only informs:
+#   gates:   the PHP test suite on in-memory SQLite, Pint (code style) and the
+#            frontend build (Vite manifest covers every entry the views ask for).
+#   informs: composer and npm audit, and PHPStan. They warn instead of blocking:
+#            new advisories appear without anyone touching the code, and
+#            PHPStan cannot run at all yet (phpstan.neon.dist excludes
+#            app/Console/Kernel.php, which does not exist, so PHPStan stops with
+#            "Invalid entry in excludePaths"). Fix that config, then add the
+#            phpstan job to the gate's needs.
+#
+# No real database or secret is used: .env comes from .env.example (placeholder
+# values only) and the test step forces SQLite in memory.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+# A new push to a pull request supersedes the run in progress. Every other
+# event (push to main, a workflow_call) gets its own group, so it is never
+# cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    name: PHP tests and code style
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: mbstring, intl, sqlite3, pdo_sqlite, bcmath, gd, zip, xml, fileinfo
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: ${{ runner.os }}-php-8.4-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-8.4-composer-
+
+      # .env must exist BEFORE composer install: package:discover boots the app,
+      # and the example file's drivers (reverb, database) would otherwise be
+      # read as defaults. Only placeholder values live in .env.example.
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Code style (Pint)
+        run: vendor/bin/pint --test
+
+      # phpunit.xml also forces these; they are repeated here so a change to
+      # phpunit.xml can never point the suite at a real database.
+      - name: Tests (SQLite in memory)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          DB_URL: ''
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          MAIL_MAILER: array
+          BROADCAST_CONNECTION: 'null'
+          PAO_DISABLE: '1'
+        run: php -d memory_limit=-1 vendor/bin/phpunit --colors=never
+
+  assets:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install and build
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      # Every @vite([...]) entry in the views must exist in the manifest, or
+      # the page that uses it answers 500 (ViteException).
+      - name: Manifest covers every Vite entry the views use
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          manifest = json.load(open('public/build/manifest.json'))
+          wanted = set()
+          for view in pathlib.Path('resources/views').rglob('*.php'):
+              for block in re.findall(r"@vite\(\s*\[([^\]]*)\]", view.read_text()):
+                  wanted.update(re.findall(r"['\"]([^'\"]+)['\"]", block))
+          problems = [f'{e} is not in the manifest' for e in sorted(wanted) if e not in manifest]
+          for entry, meta in manifest.items():
+              if not pathlib.Path('public/build', meta['file']).is_file():
+                  problems.append(f"{entry} points at {meta['file']}, which was not built")
+          print('entries the views ask for:', sorted(wanted))
+          print('entries in the manifest  :', sorted(manifest))
+          if not wanted:
+              problems.append('no @vite entries found in resources/views; the check itself is broken')
+          if problems:
+              print('::error::Vite manifest problem:', problems)
+              sys.exit(1)
+          print('OK')
+          PY
+
+  phpstan:
+    name: PHPStan (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Not in the gate: phpstan.neon.dist is currently broken (see the header).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: mbstring, intl, sqlite3, pdo_sqlite, bcmath, gd, zip, xml, fileinfo
+      - name: Prepare environment
+        run: cp .env.example .env
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress --error-format=github
+        env:
+          PAO_DISABLE: '1'
+
+  audit:
+    name: Dependency audit (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+      - name: Composer audit
+        continue-on-error: true
+        run: composer audit --locked --no-interaction || echo "::warning::composer audit reports advisories (not blocking)"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Only the packages that end up in the shipped bundle.
+      - name: npm audit (runtime packages)
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=moderate || echo "::warning::npm audit reports advisories in runtime packages (not blocking)"
+      # Includes the build toolchain. It never runs in production. Tailwind 3
+      # pulls in advisories (braces and friends) that only a Tailwind 4 upgrade
+      # clears, so this stays informational.
+      - name: npm audit (including build tools)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate || echo "::warning::npm audit reports advisories in build tooling (not blocking)"
+
+  gate:
+    name: Quality gate (all checks must pass)
+    runs-on: ubuntu-latest
+    needs: [tests, assets]
+    if: always()
+    steps:
+      - name: Require tests and assets to have passed
+        run: |
+          echo "tests:  ${{ needs.tests.result }}"
+          echo "assets: ${{ needs.assets.result }}"
+          [ "${{ needs.tests.result }}" = "success" ] && [ "${{ needs.assets.result }}" = "success" ]

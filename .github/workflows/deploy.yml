@@ -47,6 +47,26 @@ jobs:
 
           echo "== Current release: $(git rev-parse --short HEAD)"
 
+          # ---- application folder guard (tolerant: it cannot fail the deploy)
+          # $DEPLOY_PATH sits inside the docroot (~/<host>/<key>), so without a deny file the web
+          # server hands out its database, logs and vendor/ (found 2026-10-20). Same rules as
+          # app-folder-guard.yml "apply". Placed BEFORE maintenance mode on purpose: a mistake here
+          # can never leave the site down. The file is untracked, so the `git reset --hard` below
+          # does not touch it. set +e and the `||` fallbacks keep a hiccup from failing the run.
+          set +e
+          GUARD_HT="$DEPLOY_PATH/.htaccess"
+          GUARD_PARENT="$(cd "$(dirname "$DEPLOY_PATH")" 2>/dev/null && pwd -P)" || GUARD_PARENT=""
+          if [ -z "$GUARD_PARENT" ] || [ "$GUARD_PARENT" = "$(cd "${HOME:-/nonexistent}" 2>/dev/null && pwd -P)" ]; then
+            echo "== app-folder guard: skipped (the app folder is not inside a docroot; a deny file there would block the whole site)"
+          elif [ -f "$GUARD_HT" ] && grep -q 'Require all denied' "$GUARD_HT"; then
+            echo "== app-folder guard: already present"
+          elif [ -f "$GUARD_HT" ]; then
+            cp "$GUARD_HT" "$GUARD_HT.before-guard" && printf '\n# Dot: the application folder is never served.\nRequire all denied\n' >> "$GUARD_HT" && echo "== app-folder guard: appended (original kept as .htaccess.before-guard)" || echo "::warning::app-folder guard: could not append to the app folder .htaccess; continuing"
+          else
+            printf '# Dot: the application folder is never served.\nRequire all denied\n' > "$GUARD_HT" && echo "== app-folder guard: written (new file)" || echo "::warning::app-folder guard: could not write the app folder .htaccess; continuing"
+          fi
+          set -e
+
           git fetch origin main
 
           # Maintenance mode only for the risky window (migrations).
@@ -100,18 +120,36 @@ jobs:
           if ! read_crontab "$OLD"; then
             echo "::error::crontab -l answered empty or failed five times ($(cat "$ERR")). Refusing to write a crontab I could not read."; exit 1
           fi
+          KEY="${MARK#\# dot-}"
+          EXPECT_MINE=1
           OTHERS=$(grep -v "$MARK" "$OLD" | grep -c . || true)
           {
             grep -v "$MARK" "$OLD" || true
-            echo "* * * * * cd $DEPLOY_PATH && $PHP_BIN artisan schedule:run > storage/logs/cron-scheduler.log 2>&1 $MARK"
+            echo "* * * * * cd $DEPLOY_PATH && exec $PHP_BIN artisan schedule:run > storage/logs/cron-scheduler.log 2>&1 $MARK"
           } > "$NEW"
+          # Runner mode (InfoDot docs/programme R-1): when the account runs the bounded-concurrency cron runner
+          # (InfoDot: Cron Runner workflow, "install"), this app's commands go to ~/.dot-cron.d/$KEY.cron and the
+          # runner starts them, at most 4 at a time, away from second 0. Its own crontab lines are removed (a migration
+          # on deploy). Without the runner the lines above are installed as before.
+          if [ -x "$HOME/bin/dot-cron-runner" ] && grep -q '# dot-cron-runner' "$OLD"; then
+            CMDS="$(grep -F -- "$MARK" "$NEW" | sed -E 's/^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [^ ]+ //; s/ *# dot-[a-z0-9-]*$//' || true)"
+            mkdir -p "$HOME/.dot-cron.d"
+            if [ -n "$CMDS" ]; then
+              printf '%s\n' "$CMDS" > "$HOME/.dot-cron.d/$KEY.cron.tmp" && mv "$HOME/.dot-cron.d/$KEY.cron.tmp" "$HOME/.dot-cron.d/$KEY.cron"
+            else
+              rm -f "$HOME/.dot-cron.d/$KEY.cron"
+            fi
+            grep -v -F -- "$MARK" "$NEW" > "$NEW.t" || true; mv "$NEW.t" "$NEW"
+            EXPECT_MINE=0
+            echo "== runner mode: $(printf '%s' "$CMDS" | grep -c . || true) command(s) written to ~/.dot-cron.d/$KEY.cron, none left in the crontab"
+          fi
           crontab "$NEW"
           read_crontab "$CHK" || : > "$CHK"
           AFTER=$(grep -v "$MARK" "$CHK" | grep -c . || true)
           MINE=$(grep -c "$MARK" "$CHK" || true)
-          if [ "$AFTER" != "$OTHERS" ] || [ "$MINE" != "1" ]; then
+          if [ "$AFTER" != "$OTHERS" ] || [ "$MINE" != "$EXPECT_MINE" ]; then
             crontab "$OLD"
-            echo "::error::crontab verification failed (other lines before=$OTHERS after=$AFTER, mine=$MINE); the previous crontab was restored."; exit 1
+            echo "::error::crontab verification failed (other lines before=$OTHERS after=$AFTER, mine=$MINE, expected=$EXPECT_MINE); the previous crontab was restored."; exit 1
           fi
           rm -f "$OLD" "$NEW" "$CHK" "$ERR"; flock -u 9
           echo "== crontab: $MINE line(s) for $MARK installed, $OTHERS other line(s) preserved"
@@ -119,3 +157,32 @@ jobs:
           $PHP artisan up
           echo "== Deployed: $(git rev-parse --short HEAD)"
           DEPLOY
+
+      - name: Probe the application folder from outside
+        # Public requests only (no SSH, nothing is read): the app folder next to the docroot
+        # must answer 403/404 (or a 301/302 to the login), never 200. Found 2026-10-20
+        # serving its database, logs and vendor/ on four platforms. Runs after the site is
+        # live again, so it can only turn the run red. Only status codes are printed.
+        env:
+          SITE_URL: https://dopemine.infodot.co.za
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -uo pipefail
+          KEY="$(basename "$DEPLOY_PATH")"
+          [ -n "$KEY" ] && [ "$KEY" != "/" ] || { echo "::error::cannot work out the app folder name; the probe did not run"; exit 1; }
+          EXPOSED=0
+          UNREACHED=0
+          for P in .env .env.bak-secrets artisan composer.json composer.lock database/database.sqlite storage/logs/laravel.log vendor/autoload.php phpunit.xml; do
+            CODE=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$SITE_URL/$KEY/$P" || true)
+            case "$CODE" in
+              200) echo "::error::EXPOSED /$KEY/$P answered 200"; EXPOSED=1 ;;
+              000) echo "000 /$KEY/$P (no answer)"; UNREACHED=$((UNREACHED + 1)) ;;
+              *) echo "$CODE /$KEY/$P" ;;
+            esac
+          done
+          [ "$UNREACHED" -eq 0 ] || echo "::warning::$UNREACHED probe request(s) got no answer; those paths are unverified."
+          if [ "$EXPOSED" -ne 0 ]; then
+            echo "::error::The application folder is readable over HTTP (database, logs or vendor/ may be downloadable). Run the App Folder Guard workflow in InfoDot (mode apply) or add the deny file by hand, then re-run."
+            exit 1
+          fi
+          echo "== App-folder probe: no sensitive path answered 200 ($((9 - UNREACHED)) of 9 paths verified)."

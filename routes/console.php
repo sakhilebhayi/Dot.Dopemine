@@ -1,7 +1,9 @@
 <?php
 
 use App\Console\Commands\BackupSqliteDatabase;
+use App\Console\Commands\ExpirePoints;
 use App\Console\Commands\ScanMechanicDecoupling;
+use App\Console\Commands\SendExpiryWarnings;
 use App\Http\Controllers\SchedulerProbeController;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -18,6 +20,15 @@ Artisan::command('inspire', function () {
 Schedule::command(ScanMechanicDecoupling::class)
     ->daily()
     ->withoutOverlapping();
+
+// Dot Points: lots lapse 12 months after they are granted. The ledger refuses to spend expired points either way;
+// this writes the `expire` entries so the history shows it. Idempotent.
+Schedule::command(ExpirePoints::class)->dailyAt('03:10')->withoutOverlapping()->onOneServer();
+
+// Dot Points: the single 30-day heads-up pushed through Dot.Notify. Only acts when POINTS_EXPIRY_DELIVERY=notify (the
+// default, `infodot`, has InfoDot pull warnings instead: docs/points-expiry-warnings-api.md). Hourly so a failed
+// delivery is retried on its backoff schedule; each run only touches warnings that are due.
+Schedule::command(SendExpiryWarnings::class)->hourlyAt(40)->withoutOverlapping()->onOneServer();
 
 // Liveness of the platform itself. /up/scheduler reports this heartbeat's
 // age and answers 503 once it is older than

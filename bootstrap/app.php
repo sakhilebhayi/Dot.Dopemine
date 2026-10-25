@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Middleware\EnsurePointsAdmin;
 use App\Services\Guardian\ErrorCounter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsurePointsAdmin::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Feeds the guardian's hourly error counter (ErrorRateCheck). The
