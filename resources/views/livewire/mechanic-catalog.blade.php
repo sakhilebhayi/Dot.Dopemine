@@ -28,7 +28,7 @@
                     @endif
                     @if ($dismissingCandidateId === $candidate->id)
                         <div style="margin-top:0.6rem;">
-                            <textarea wire:model="dismissalNotes" class="dot-input" rows="2" placeholder="Dismissal notes (required)"></textarea>
+                            <textarea aria-label="Dismissal notes" wire:model="dismissalNotes" class="dot-input" rows="2" placeholder="Dismissal notes (required)"></textarea>
                             @error('dismissalNotes') <div style="color:#ef4444;font-size:11px;margin-top:4px;">{{ $message }}</div> @enderror
                             <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
                                 <button wire:click="confirmDismissCandidate" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Confirm dismiss</button>
@@ -43,13 +43,13 @@
 
     <div class="dot-card" style="padding:1.25rem 1.5rem;margin-bottom:1rem;">
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
-            <select wire:model.live="statusFilter" class="dot-input" style="width:auto;">
+            <select aria-label="Statusfilter" wire:model.live="statusFilter" class="dot-input" style="width:auto;">
                 <option value="">All statuses</option>
                 @foreach ($this->statuses as $status)
                     <option value="{{ $status->value }}">{{ $status->label() }}</option>
                 @endforeach
             </select>
-            <select wire:model.live="categoryFilter" class="dot-input" style="width:auto;">
+            <select aria-label="Categoryfilter" wire:model.live="categoryFilter" class="dot-input" style="width:auto;">
                 <option value="">All categories</option>
                 @foreach ($this->categories as $category)
                     <option value="{{ $category->value }}">{{ $category->label() }}</option>
@@ -113,7 +113,7 @@
 
                 @if ($decertifyingId === $mechanic->id)
                     <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);">
-                        <textarea wire:model="decertifyingReason" class="dot-input" rows="2" placeholder="Decertification reason (required — becomes an incident record, wiki.md §10)"></textarea>
+                        <textarea aria-label="Decertification reason" wire:model="decertifyingReason" class="dot-input" rows="2" placeholder="Decertification reason (required — becomes an incident record, wiki.md §10)"></textarea>
                         @error('decertifyingReason') <div style="color:#ef4444;font-size:11px;margin-top:4px;">{{ $message }}</div> @enderror
                         <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
                             <button wire:click="confirmDecertify" class="dot-btn" style="font-size:11px;padding:5px 10px;background:#ef4444;color:#fff;">Confirm decertify</button>
@@ -124,19 +124,19 @@
 
                 @if ($recordingWellbeingId === $mechanic->id)
                     <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);">
-                        <input type="text" wire:model="wellbeingCohort" placeholder="Cohort (e.g. Dot.Projects — pilot team)" class="dot-input" style="margin-bottom:0.4rem;">
+                        <input aria-label="Cohort" type="text" wire:model="wellbeingCohort" placeholder="Cohort (e.g. Dot.Projects — pilot team)" class="dot-input" style="margin-bottom:0.4rem;">
                         @error('wellbeingCohort') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
-                            <input type="date" wire:model="wellbeingWindowStart" class="dot-input">
-                            <input type="date" wire:model="wellbeingWindowEnd" class="dot-input">
-                            <input type="number" wire:model="wellbeingCohortSize" placeholder="Cohort size (n >= 50)" class="dot-input" style="width:150px;">
-                            <input type="text" wire:model="wellbeingMovement" placeholder="Wellbeing movement" class="dot-input" style="width:150px;">
+                            <input aria-label="Wellbeingwindowstart" type="date" wire:model="wellbeingWindowStart" class="dot-input">
+                            <input aria-label="Wellbeingwindowend" type="date" wire:model="wellbeingWindowEnd" class="dot-input">
+                            <input aria-label="Cohort size" type="number" wire:model="wellbeingCohortSize" placeholder="Cohort size (n >= 50)" class="dot-input" style="width:150px;">
+                            <input aria-label="Wellbeing movement" type="text" wire:model="wellbeingMovement" placeholder="Wellbeing movement" class="dot-input" style="width:150px;">
                         </div>
                         @error('wellbeingWindowStart') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                         @error('wellbeingWindowEnd') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                         @error('wellbeingCohortSize') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                         @error('wellbeingMovement') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
-                        <textarea wire:model="wellbeingNotes" class="dot-input" rows="2" placeholder="Notes (optional)"></textarea>
+                        <textarea aria-label="Notes" wire:model="wellbeingNotes" class="dot-input" rows="2" placeholder="Notes (optional)"></textarea>
                         <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
                             <button wire:click="saveWellbeingObservation" class="dot-btn dot-btn-primary" style="font-size:11px;padding:5px 10px;">Save observation</button>
                             <button wire:click="cancelRecordingWellbeing" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Cancel</button>

@@ -39,27 +39,27 @@
                             <div class="dot-card" style="padding:1rem;">
                                 <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
                                     <div>
-                                        <label style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Period start</label>
-                                        <input type="date" wire:model="outcomePeriodStart" class="dot-input" style="display:block;">
+                                        <label for="livewire-mechanic-deployments-outcomeperiodstart" style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Period start</label>
+                                        <input id="livewire-mechanic-deployments-outcomeperiodstart" type="date" wire:model="outcomePeriodStart" class="dot-input" style="display:block;">
                                         @error('outcomePeriodStart') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                                     </div>
                                     <div>
-                                        <label style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Period end</label>
-                                        <input type="date" wire:model="outcomePeriodEnd" class="dot-input" style="display:block;">
+                                        <label for="livewire-mechanic-deployments-outcomeperiodend" style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Period end</label>
+                                        <input id="livewire-mechanic-deployments-outcomeperiodend" type="date" wire:model="outcomePeriodEnd" class="dot-input" style="display:block;">
                                         @error('outcomePeriodEnd') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                                     </div>
                                     <div>
-                                        <label style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Engagement movement</label>
-                                        <input type="text" wire:model="outcomeEngagementMovement" placeholder="e.g. 0.15" class="dot-input" style="display:block;width:110px;">
+                                        <label for="livewire-mechanic-deployments-outcomeengagementmovement" style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Engagement movement</label>
+                                        <input id="livewire-mechanic-deployments-outcomeengagementmovement" type="text" wire:model="outcomeEngagementMovement" placeholder="e.g. 0.15" class="dot-input" style="display:block;width:110px;">
                                         @error('outcomeEngagementMovement') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                                     </div>
                                     <div>
-                                        <label style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Outcome movement</label>
-                                        <input type="text" wire:model="outcomeOutcomeMovement" placeholder="e.g. -0.02" class="dot-input" style="display:block;width:110px;">
+                                        <label for="livewire-mechanic-deployments-outcomenotes" style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:0.06em;">Outcome movement</label>
+                                        <input aria-label="-0.02" type="text" wire:model="outcomeOutcomeMovement" placeholder="e.g. -0.02" class="dot-input" style="display:block;width:110px;">
                                         @error('outcomeOutcomeMovement') <div style="color:#ef4444;font-size:11px;">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
-                                <textarea wire:model="outcomeNotes" class="dot-input" rows="2" placeholder="Notes (optional)" style="margin-top:0.6rem;"></textarea>
+                                <textarea id="livewire-mechanic-deployments-outcomenotes" wire:model="outcomeNotes" class="dot-input" rows="2" placeholder="Notes (optional)" style="margin-top:0.6rem;"></textarea>
                                 <div style="display:flex;gap:0.5rem;margin-top:0.6rem;">
                                     <button wire:click="saveOutcome" class="dot-btn dot-btn-primary" style="font-size:11px;padding:5px 10px;">Save outcome</button>
                                     <button wire:click="cancelRecordingOutcome" class="dot-btn dot-btn-ghost" style="font-size:11px;padding:5px 10px;">Cancel</button>
