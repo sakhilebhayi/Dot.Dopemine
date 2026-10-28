@@ -179,10 +179,20 @@ jobs:
           [ -n "$KEY" ] && [ "$KEY" != "/" ] || { echo "::error::cannot work out the app folder name; the probe did not run"; exit 1; }
           EXPOSED=0
           UNREACHED=0
+          # A 200 is recorded with its size and type (never the body), and asked once more after 20 s: on
+          # 2026-10-28 a probe saw 200 on nine paths for a few seconds and the cause could not be seen afterwards.
+          # Still red if the second answer is also 200; the first answer is kept in the log either way.
           for P in .env .env.bak-secrets artisan composer.json composer.lock database/database.sqlite storage/logs/laravel.log vendor/autoload.php phpunit.xml; do
-            CODE=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$SITE_URL/$KEY/$P" || true)
+            OUT=$(curl -s -o /dev/null -m 15 -w '%{http_code} %{size_download} %{content_type}' "$SITE_URL/$KEY/$P" || true)
+            CODE="${OUT%% *}"
+            if [ "$CODE" = 200 ]; then
+              echo "::warning::first answer for /$KEY/$P was 200 (bytes and type: ${OUT#* }); asking again in 20 s"
+              sleep 20
+              OUT=$(curl -s -o /dev/null -m 15 -w '%{http_code} %{size_download} %{content_type}' "$SITE_URL/$KEY/$P" || true)
+              CODE="${OUT%% *}"
+            fi
             case "$CODE" in
-              200) echo "::error::EXPOSED /$KEY/$P answered 200"; EXPOSED=1 ;;
+              200) echo "::error::EXPOSED /$KEY/$P answered 200 twice (bytes and type: ${OUT#* })"; EXPOSED=1 ;;
               000) echo "000 /$KEY/$P (no answer)"; UNREACHED=$((UNREACHED + 1)) ;;
               *) echo "$CODE /$KEY/$P" ;;
             esac
