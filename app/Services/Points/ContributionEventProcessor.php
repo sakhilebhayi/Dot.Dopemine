@@ -151,7 +151,11 @@ class ContributionEventProcessor
             }
 
             // duplicate (same key seen), daily_cap, rule_off: nothing was paid and the contribution stays waiting.
-            return ['outcome' => $result->status, 'detail' => $result->status === AwardOutcome::DAILY_CAP ? 'The daily cap for this rule is reached. It stays waiting for approval.' : null];
+            return ['outcome' => $result->status, 'detail' => match ($result->status) {
+                AwardOutcome::DAILY_CAP => 'The daily cap for this rule is reached. It stays waiting for approval.',
+                AwardOutcome::PAIR_LIMITED => 'These two accounts have rewarded each other repeatedly in the last 30 days; this award would pay nothing. It stays waiting for approval.',
+                default => null,
+            }];
         });
     }
 
@@ -436,7 +440,7 @@ class ContributionEventProcessor
 
         $result = $this->ledger->award($contribution->user_uuid, $rule, $contribution->ref, $event['event_id'], null, ['accepted_by' => $actor], approved: true);
 
-        return ['outcome' => $result->status, 'detail' => null];
+        return ['outcome' => $result->status, 'detail' => $result->status === AwardOutcome::PAIR_LIMITED ? 'These two accounts have rewarded each other repeatedly in the last 30 days; this acceptance pays nothing.' : null];
     }
 
     /** Takes back the unspent part of the points a contribution earned under one rule (or all rules). */

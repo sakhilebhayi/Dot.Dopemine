@@ -13,6 +13,21 @@ return [
         ],
     ],
 
+    /*
+    | Diminishing returns for a pair of accounts that reward each other (the collusion safeguard of the community-rewards
+    | brief, section 9). Only a RECIPROCAL pair is affected: if A's work was accepted, verified or approved by B, and B's
+    | by A, inside `window_days`, every further award between those two pays less. One-way help is never reduced: an asker
+    | who keeps accepting an expert's answers does not reduce the expert's points. The first `free_awards` between the pair
+    | pay in full; the next ones pay the fractions in `steps` (the last step repeats): 0.5, 0.25, then 0 means "stop paying".
+    | Back-office approvals (`admin:...`) are not counted. Every reduction is written to the entry (`meta.pair_decay`).
+    */
+    'pair_decay' => [
+        'enabled' => (bool) env('POINTS_PAIR_DECAY', true),
+        'window_days' => (int) env('POINTS_PAIR_DECAY_DAYS', 30),
+        'free_awards' => (int) env('POINTS_PAIR_FREE_AWARDS', 3),
+        'steps' => [0.5, 0.25, 0.0],
+    ],
+
     // Company-only knowledge is visible to a handful of colleagues, so it is not rewarded: nobody outside can check it,
     // which is how a second account would farm points. Switch on only with the owner's agreement.
     'reward_company_visibility' => (bool) env('POINTS_REWARD_COMPANY_VISIBILITY', false),
