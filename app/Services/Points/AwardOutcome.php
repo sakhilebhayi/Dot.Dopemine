@@ -19,6 +19,9 @@ final class AwardOutcome
 
     public const NEEDS_APPROVAL = 'needs_approval';
 
+    /** Two accounts reward each other so often that this award would pay nothing (see config points.pair_decay). */
+    public const PAIR_LIMITED = 'pair_limited';
+
     public function __construct(public readonly string $status, public readonly ?LedgerEntry $entry = null) {}
 
     public function awarded(): bool

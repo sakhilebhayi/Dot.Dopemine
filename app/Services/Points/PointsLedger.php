@@ -5,6 +5,7 @@ namespace App\Services\Points;
 use App\Exceptions\Points\InsufficientPoints;
 use App\Models\LedgerEntry;
 use App\Models\RewardRule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -53,6 +54,16 @@ class PointsLedger
 
             if ($already >= $rule->max_awards_per_contribution) {
                 return new AwardOutcome(AwardOutcome::ALREADY_REWARDED);
+            }
+
+            $decay = $this->pairDecay($userUuid, $meta);
+            if ($decay !== null) {
+                $meta['pair_decay'] = ['count' => $decay['count'], 'multiplier' => $decay['multiplier'], 'full_points' => $amount];
+                $amount = (int) floor($amount * $decay['multiplier']);
+
+                if ($amount <= 0) {
+                    return new AwardOutcome(AwardOutcome::PAIR_LIMITED);
+                }
             }
 
             if ($rule->daily_cap_points !== null && $this->awardedToday($userUuid, $rule->key) + $amount > $rule->daily_cap_points) {
@@ -270,6 +281,52 @@ class PointsLedger
     public function remaining(LedgerEntry $lot): int
     {
         return $lot->points + (int) LedgerEntry::where('lot_id', $lot->id)->sum('points');
+    }
+
+    /**
+     * The reduction for a pair of accounts that reward each other, or null when none applies (switched off, no actor, a
+     * back-office actor, or one-way help only). `count` is the awards between the two inside the window, both ways.
+     *
+     * @param  array<string, mixed>  $meta
+     * @return array{count: int, multiplier: float}|null
+     */
+    private function pairDecay(string $userUuid, array $meta): ?array
+    {
+        $cfg = config('points.pair_decay');
+        $actor = $meta['accepted_by'] ?? $meta['verified_by'] ?? $meta['approved_by'] ?? null;
+
+        if (! ($cfg['enabled'] ?? false) || ! is_string($actor) || $actor === '' || $actor === $userUuid || str_starts_with($actor, 'admin:')) {
+            return null;
+        }
+
+        $since = now()->subDays(max(1, (int) $cfg['window_days']));
+        $forward = $this->awardsByActor($userUuid, $actor, $since);
+        $backward = $this->awardsByActor($actor, $userUuid, $since);
+
+        if ($backward === 0) {
+            return null;
+        }
+
+        $count = $forward + $backward;
+        $free = max(0, (int) $cfg['free_awards']);
+
+        if ($count < $free) {
+            return null;
+        }
+
+        $steps = array_values($cfg['steps'] ?: [0.0]);
+        $multiplier = (float) $steps[min($count - $free, count($steps) - 1)];
+
+        return $multiplier >= 1.0 ? null : ['count' => $count, 'multiplier' => $multiplier];
+    }
+
+    /** Live awards (not reversed) to `$author` since `$since` that `$actor` accepted, verified or approved. */
+    private function awardsByActor(string $author, string $actor, Carbon $since): int
+    {
+        return LedgerEntry::where('user_uuid', $author)->where('type', LedgerEntry::AWARD)->where('created_at', '>=', $since)
+            ->where(fn ($q) => $q->where('meta->accepted_by', $actor)->orWhere('meta->verified_by', $actor)->orWhere('meta->approved_by', $actor))
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('ledger_entries as r')->whereColumn('r.lot_id', 'ledger_entries.id')->where('r.type', LedgerEntry::REVERSE))
+            ->count();
     }
 
     /** Points awarded under a rule today (UTC), reversals not counted back. */
