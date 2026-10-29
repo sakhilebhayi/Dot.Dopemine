@@ -53,7 +53,7 @@ class RewardRulesAdminTest extends TestCase
         }
 
         $page->assertSee('Version history (2)')->assertSee('Raised after the first month.')->assertSee('Version 2');
-        $this->assertSame(10, RewardRule::distinct()->count('key'));
+        $this->assertSame(11, RewardRule::distinct()->count('key'));
     }
 
     public function test_publishing_writes_a_new_version_and_closes_the_old_one(): void

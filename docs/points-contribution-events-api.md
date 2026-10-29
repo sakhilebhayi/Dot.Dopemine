@@ -26,7 +26,7 @@ request, never by a field in it.
 | 200 | `{"status":"duplicate"}` | `event_id` seen before | treat as delivered |
 | 409 | `{"code":"contribution_not_ready","message":"...","status":"not_ready"}` + `Retry-After: 60` | the event refers to a contribution this service has not been told about yet. **Nothing is recorded**, including the `event_id`, so the retry is processed afresh. | retry later (InfoDot retries 409/425/429/5xx and holds later events for that ref behind it) |
 | 401 | | bad or stale signature | operator problem |
-| 422 | | malformed envelope | park |
+| 422 | `{"code":"...","message":"..."}` for `infodot.seminar.hosted`; the standard Laravel error body for a malformed envelope | malformed envelope, or (seminar only) an event that does not qualify or carries anything outside its whitelist. **Nothing is recorded**, including the `event_id`. See the seminar section for the codes | park (do not retry unchanged) |
 
 Outcomes under 202: `awarded`, `needs_approval`, `already_rewarded`, `already_approved`, `daily_cap`, `no_points`,
 `rejected`, `ignored`, `reversed`, `flagged`, `unsupported`. Only `awarded` creates points. `rejected`/`no_points`/
@@ -97,6 +97,71 @@ Never send voter ids; they are not read or stored. The contribution must already
 `contribution_not_ready`**. Pays once per contribution (a later, higher threshold is `already_rewarded`).
 The multi-user bonus is the same event with `facts.rule_key = "infodot.solution.multi_user_bonus"` (5-20, approval
 gated: `actor_uuid` required and not the author). A `rule_key` that does not belong to the event type is `rejected`.
+
+### `infodot.seminar.hosted`
+Hosting a seminar on InfoDot earns Dot Points for the **host only** (owner decision 2026-10-29). Attending earns nothing
+and attendees are never named. InfoDot sends this once, when a seminar has **finished**; a cancelled seminar must not be
+sent. Dopemine enforces the eligibility itself and does not trust that InfoDot applied it. Tier or reputation data is not
+part of this contract and is refused if it appears: it never leaves InfoDot.
+
+Same endpoint, same HMAC signing, same idempotency as every other type (`event_id` unique; a repeat is `200 {"status":"duplicate"}`).
+
+| Field | Rule |
+| --- | --- |
+| `type` | `infodot.seminar.hosted` |
+| `contribution_ref` | `seminar:{id}`, where `{id}` is 1-100 characters of `A-Z a-z 0-9 . _ -`. Anything else is `seminar_ref_invalid` |
+| `user_uuid` | the **host**: the author. The first event for the ref fixes it; a later event naming someone else is `rejected` |
+| `visibility`, `tenant_uuid` | as for every type: a `company` seminar earns nothing (`no_points`) unless `POINTS_REWARD_COMPANY_VISIBILITY` is on |
+| `actor_uuid` | not used; if present it is ignored and never stored |
+| `facts.attendee_count` | integer >= 0: distinct attendees |
+| `facts.rating_count` | integer >= 0: ratings received |
+| `facts.average_rating` | number 0 to 5 with at most one decimal (`4`, `4.0`, `4.5`) |
+
+All three `facts` fields are required and must be JSON numbers (not strings). **Nothing else is accepted**: for this type an
+unknown field, in `facts` or at the top level of the body (a list of attendees, free text, `points`, `approved`, `rule_key`,
+anything about tiers), is refused with `seminar_unknown_field` instead of being ignored as it is for the other types.
+The amount is never taken from the sender: the rule's base value is paid.
+
+**Eligibility** (all must hold, checked in Dopemine; thresholds in `config/points.php` under `seminar_hosted`, env-overridable):
+`attendee_count >= 3` (`POINTS_SEMINAR_MIN_ATTENDEES`), `rating_count >= 3` (`POINTS_SEMINAR_MIN_RATINGS`) and
+`average_rating >= 4.0` (`POINTS_SEMINAR_MIN_AVERAGE_RATING`).
+
+**Reward**: rule `seminar_hosted` v1, once per seminar (`max_awards_per_contribution` 1), 10 points, daily cap 20 points per
+host. These numbers and the 5-15 range are PROPOSALS for the owner to tune (an administrator publishes a new version in the
+back-office). The ledger entry records the rule version and, for audit, only the three counts.
+
+Example (signed like every request):
+
+```json
+{
+  "event_id": "7d6f3a4e-2a2b-4a53-9d8e-0e3f6f2c9a11",
+  "type": "infodot.seminar.hosted",
+  "occurred_at": "2026-11-05T15:30:00+02:00",
+  "user_uuid": "9b1d5a52-6f0e-4d0b-8a35-2d6a7c1e4b90",
+  "contribution_ref": "seminar:41",
+  "visibility": "public",
+  "facts": { "attendee_count": 5, "rating_count": 4, "average_rating": 4.5 }
+}
+```
+
+| Answer | Meaning |
+| --- | --- |
+| `202 {"status":"awarded"}` | the host was paid |
+| `202 {"status":"already_rewarded"}` | another event for a seminar that was already paid |
+| `202 {"status":"daily_cap"}` | the host reached the daily cap; nothing is paid |
+| `202 {"status":"no_points"}` | company-only, flagged or reversed seminar, or the rule is switched off |
+| `202 {"status":"rejected"}` | the host named differs from the one that was recorded first, or the ref belongs to something that is not a seminar |
+| `200 {"status":"duplicate"}` | `event_id` seen before |
+| `422` | refused, **no ledger row, nothing remembered**; body `{"code","message"}` plus `fields` or `reasons` |
+
+422 reason codes: `seminar_ref_invalid`, `seminar_unknown_field` (`fields` lists them), `seminar_facts_invalid` (missing, wrong type,
+out of range, or more than one decimal; `reasons` says which), `seminar_below_attendee_threshold`,
+`seminar_below_rating_count_threshold`, `seminar_below_rating_threshold` (when several thresholds fail, `code` is the first in
+that order and `reasons` lists them all).
+
+**Cancelling or withdrawing after payment**: send `infodot.contribution.reward_reversed` for the same `contribution_ref` with
+`facts.rule_key = "seminar_hosted"` (or no `rule_key`) and `facts.reason`. It takes back the unspent part of the award, the
+rest is reported in `detail`, and the seminar stays reversed: a later `infodot.seminar.hosted` for the same ref pays nothing.
 
 ### `infodot.contribution.flagged`
 No actor needed. Holds the contribution; takes no points back.

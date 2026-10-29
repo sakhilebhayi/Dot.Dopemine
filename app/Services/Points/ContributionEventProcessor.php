@@ -41,6 +41,7 @@ class ContributionEventProcessor
         'infodot.knowledge.corrected',
         'infodot.knowledge.adopted',
         'infodot.contribution.helpful',
+        SeminarHostedGate::TYPE,
     ];
 
     /**
@@ -78,6 +79,7 @@ class ContributionEventProcessor
                 'infodot.contribution.reward_reversed' => $this->reversed($platform, $event),
                 'infodot.contribution.flagged' => $this->flagged($platform, $event),
                 'infodot.contribution.approved' => $this->approved($platform, $event),
+                SeminarHostedGate::TYPE => $this->seminarHosted($platform, $event),
                 default => isset(self::TYPED[$type])
                     ? $this->typed($platform, $event, self::TYPED[$type])
                     : ['outcome' => 'unsupported', 'detail' => "No handler for {$type} yet."],
@@ -173,6 +175,67 @@ class ContributionEventProcessor
         }
 
         return $this->approvePending($contribution, $event['actor_uuid'] ?? null, $event['event_id'], 'event');
+    }
+
+    /**
+     * `infodot.seminar.hosted`: the HOST (`user_uuid`, fixed by the first event for the ref) earns once for a seminar that
+     * finished well attended and well rated. Attendees earn nothing and are never named. The intake already refused an
+     * event that does not qualify (SeminarHostedGate); it is checked again here so no caller can skip it.
+     */
+    private function seminarHosted(string $platform, array $event): array
+    {
+        $ref = $event['contribution_ref'];
+        $facts = $event['facts'] ?? [];
+
+        if (($refusal = SeminarHostedGate::refusal($event)) !== null) {
+            return ['outcome' => 'rejected', 'detail' => $refusal['code']];
+        }
+
+        $contribution = Contribution::where('platform', $platform)->where('ref', $ref)->lockForUpdate()->first();
+
+        if ($contribution === null) {
+            $contribution = Contribution::create([
+                'platform' => $platform,
+                'ref' => $ref,
+                'user_uuid' => $event['user_uuid'],
+                'kind' => 'seminar',
+                'status' => 'published',
+                'tenant_uuid' => $event['tenant_uuid'] ?? null,
+                'visibility' => $event['visibility'] ?? 'public',
+                'meta' => ['self_answer' => false],
+                'status_changed_at' => now(),
+            ]);
+        } elseif ($contribution->kind !== 'seminar') {
+            return ['outcome' => 'rejected', 'detail' => 'The reference belongs to something that is not a seminar.'];
+        }
+
+        if ($contribution->user_uuid !== $event['user_uuid']) {
+            return ['outcome' => 'rejected', 'detail' => 'The host named does not match the seminar.'];
+        }
+
+        if (($blocked = $this->blockedState($contribution)) !== null) {
+            return $blocked;
+        }
+
+        if ($contribution->visibility !== 'public' && ! config('points.reward_company_visibility')) {
+            return ['outcome' => 'no_points', 'detail' => 'Company-only knowledge is not rewarded.'];
+        }
+
+        $rule = RewardRule::current(SeminarHostedGate::RULE_KEY);
+        if ($rule === null) {
+            return ['outcome' => 'no_points', 'detail' => 'The rule is switched off.'];
+        }
+
+        // Only counts, for audit: no attendee identity and no text ever reaches the ledger.
+        $meta = ['event' => $event['type'], 'attendee_count' => $facts['attendee_count'], 'rating_count' => $facts['rating_count'], 'average_rating' => $facts['average_rating']];
+
+        $result = $this->ledger->award($contribution->user_uuid, $rule, $ref, $event['event_id'], null, $meta, approved: true);
+
+        if ($result->awarded()) {
+            $contribution->transitionTo('rewarded');
+        }
+
+        return ['outcome' => $result->status, 'detail' => null];
     }
 
     /** Events that pay under a rule of the same name (see TYPED). */
@@ -461,8 +524,10 @@ class ContributionEventProcessor
             $unrecovered += $this->ledger->reverse($award, (string) ($event['facts']['reason'] ?? 'Reversed by the platform'), 'reverse:'.$event['event_id'].':'.$award->id)['unrecovered'];
         }
 
-        if (! $ruleKey) {
-            Contribution::where('platform', $platform)->where('ref', $ref)->first()?->transitionTo('reversed');
+        // A reversed seminar stays reversed (a cancelled or withdrawn one must not be paid again by a later event).
+        $contribution = Contribution::where('platform', $platform)->where('ref', $ref)->first();
+        if ($contribution !== null && (! $ruleKey || $contribution->kind === 'seminar')) {
+            $contribution->transitionTo('reversed');
         }
 
         return ['outcome' => 'reversed', 'detail' => $unrecovered > 0 ? "{$unrecovered} points were already spent and could not be taken back." : null];

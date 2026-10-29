@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\RewardEvent;
 use App\Services\Points\ContributionEventProcessor;
 use App\Services\Points\IngestSignature;
+use App\Services\Points\SeminarHostedGate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -43,6 +44,12 @@ class ContributionEventController extends Controller
 
         if (RewardEvent::where('event_id', $data['event_id'])->exists()) {
             return response()->json(['status' => 'duplicate'], 200);
+        }
+
+        // A seminar that does not qualify, or an event carrying anything beyond its whitelist, is refused here: 422, nothing
+        // recorded (not even the event id, so the same event can be sent again once the figures or thresholds change).
+        if ($data['type'] === SeminarHostedGate::TYPE && ($refusal = SeminarHostedGate::refusal($request->json()->all())) !== null) {
+            return response()->json($refusal, 422);
         }
 
         $result = in_array($data['type'], ContributionEventProcessor::SUPPORTED, true)

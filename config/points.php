@@ -28,6 +28,18 @@ return [
         'steps' => [0.5, 0.25, 0.0],
     ],
 
+    /*
+    | Hosting a seminar on InfoDot (event `infodot.seminar.hosted`, rule `seminar_hosted`). Only the HOST earns, and
+    | only when the seminar finished well attended and well rated; attending earns nothing. Dopemine enforces these
+    | thresholds itself and never trusts InfoDot to have applied them: an event below any of them is refused with 422
+    | and writes nothing. Owner decision 2026-10-29: at least 3 distinct attendees, at least 3 ratings, average 4.0+.
+    */
+    'seminar_hosted' => [
+        'min_attendees' => (int) env('POINTS_SEMINAR_MIN_ATTENDEES', 3),
+        'min_ratings' => (int) env('POINTS_SEMINAR_MIN_RATINGS', 3),
+        'min_average_rating' => (float) env('POINTS_SEMINAR_MIN_AVERAGE_RATING', 4.0),
+    ],
+
     // Company-only knowledge is visible to a handful of colleagues, so it is not rewarded: nobody outside can check it,
     // which is how a second account would farm points. Switch on only with the owner's agreement.
     'reward_company_visibility' => (bool) env('POINTS_REWARD_COMPANY_VISIBILITY', false),
