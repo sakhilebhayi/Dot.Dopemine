@@ -26,6 +26,8 @@ class RewardRuleSeeder extends Seeder
             'infodot.knowledge.corrected' => ['infodot.knowledge.corrected', 3, 3, 10, true, null, 'Verified correction to existing knowledge.'],
             'infodot.knowledge.adopted' => ['infodot.knowledge.adopted', 10, 10, 25, true, null, 'Contribution adopted into an approved knowledge pack.'],
             'infodot.solution.multi_user_bonus' => ['infodot.contribution.helpful', 5, 5, 20, true, null, 'High-value solution that helped several people (bonus).'],
+            // PROPOSAL (owner to tune, 2026-10-29): a host of a well attended, well rated seminar. Flat 10 like a verified solution; the 5-15 range is for a later version, the event carries no points. Two a day at most.
+            'seminar_hosted' => ['infodot.seminar.hosted', 10, 5, 15, false, 20, 'Hosted a seminar that finished well attended and well rated.'],
         ];
 
         foreach ($rules as $key => [$event, $points, $min, $max, $approval, $cap, $note]) {
