@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsurePointsAdmin;
+use App\Http\Middleware\SecurityHeaders;
 use App\Services\Guardian\ErrorCounter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Every response, including /up, the API and error pages: baseline security headers.
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: EnsurePointsAdmin::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
